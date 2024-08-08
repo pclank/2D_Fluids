@@ -1,6 +1,7 @@
 // Local Headers
 #include "glitter.hpp"
 #include <tools.hpp>
+#include <Shader.hpp>
 
 // System Headers
 #include <glad/glad.h>
@@ -11,6 +12,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <direct.h>
+#include <wingdi.h>
 
 int main(int argc, char * argv[]) {
 
@@ -54,7 +56,21 @@ int main(int argc, char * argv[]) {
     default_device = all_devices[0];
     std::cout << "Using device: " << default_device.getInfo<CL_DEVICE_NAME>() << "\n";
 
-    context = cl::Context({ default_device });
+    cl_context_properties properties[] =
+    {
+      CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+      CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+      CL_CONTEXT_PLATFORM, (cl_context_properties)default_platform(),
+      NULL
+    };
+
+    cl_int err = CL_SUCCESS;
+    context = clCreateContext(properties, 1, &default_device(), NULL, NULL, &err);
+
+    if (err != CL_SUCCESS) {
+        std::cout << "Error creating context" << " " << err << "\n";
+        //exit(-1);
+    }
 
     // Create OpenCL Image
     target_texture = cl::Image2D(context, CL_MEM_READ_ONLY, cl::ImageFormat(CL_RGBA, CL_FLOAT), mWidth, mHeight);
@@ -87,7 +103,8 @@ int main(int argc, char * argv[]) {
 
 
     //kernel_source = ReadFile("C:/Repos/2D_Fluids/Build/2D_Fluids/Release/gpu_src/test.cl");
-    kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}";
+    //kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}";
+    kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}\n\nkernel void tex_test(write_only image2d_t tgt_tex)\n{\nint x = get_global_id(0);\nint y = get_global_id(1);\nwrite_imagef(tgt_tex, (int2)(x, y), (float4)(0.1 * x, 0.0f, 0.0f, 0.0f));}";
     sources.push_back({ kernel_source.c_str(), kernel_source.length() });
 
     // Build program and compile
@@ -98,18 +115,62 @@ int main(int argc, char * argv[]) {
         std::cout << " Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << "\n";
         exit(1);
     }
-
-    tester = cl::Kernel(program, "test");
     
     test_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
-    //queue.enqueueFillBuffer(test_buffer, 0, 0, sizeof(int) * 10);
 
+#ifdef TEXTURE_TEST
+    tester = cl::Kernel(program, "tex_test");
+    tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
+#else
+    tester = cl::Kernel(program, "test");
     tester(cl::EnqueueArgs(queue, global), test_buffer).wait();
 
     int test_c[10];
     queue.enqueueReadBuffer(test_buffer, CL_TRUE, 0, sizeof(int) * 10, &test_c);
 
     std::cout << test_c[0] << test_c[1] << test_c[2] << std::endl;
+#endif // TEXTURE_TEST
+
+    // OpenGL shaders
+    Shader simple_shader("C:/Repos/2D_Fluids/Glitter/Shaders/simple_shader.vs", "C:/Repos/2D_Fluids/Glitter/Shaders/simple_shader.fs");
+
+    // Setup OpenGL Buffers
+    unsigned int VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(hardcoded_vertices), hardcoded_vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    // OpenGL texture
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    //glBindBuffer(GL_PIXEL_UNPACK_BUFFER, myVBO);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mWidth, mHeight, GL_RGBA, GL_FLOAT, NULL);
 
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
@@ -121,10 +182,23 @@ int main(int argc, char * argv[]) {
         glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // bind Texture
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        // render container
+        simple_shader.use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
         // Flip Buffers and Draw
         glfwSwapBuffers(mWindow);
         glfwPollEvents();
-    }   
+    }
+
+    // Clear buffers
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
     
     glfwTerminate();
 

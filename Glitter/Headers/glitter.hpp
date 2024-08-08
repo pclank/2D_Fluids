@@ -25,10 +25,29 @@ cl::CommandQueue queue;
 cl::Program program;
 cl::Buffer test_buffer;
 cl::Kernel test_kernel;
-//cl::NDRange global(mWidth * mHeight);
+cl::NDRange global_tex(mWidth * mHeight);
 cl::NDRange global(10);
 
-cl::make_kernel<cl::Buffer> tester(test_kernel);
+float hardcoded_vertices[] = {
+    // positions          // colors           // texture coords
+     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+};
+
+unsigned int indices[] = {
+    0, 1, 3, // first triangle
+    1, 2, 3  // second triangle
+};
+
+#define TEXTURE_TEST
+
+#ifdef TEXTURE_TEST
+	cl::make_kernel<cl::Image2D> tester(test_kernel);
+#else
+	cl::make_kernel<cl::Buffer> tester(test_kernel);
+#endif // TEXTURE_TEST
 
 // Images
 cl::Image2D target_texture;
