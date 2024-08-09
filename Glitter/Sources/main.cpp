@@ -104,7 +104,8 @@ int main(int argc, char * argv[]) {
 
     //kernel_source = ReadFile("C:/Repos/2D_Fluids/Build/2D_Fluids/Release/gpu_src/test.cl");
     //kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}";
-    kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}\n\nkernel void tex_test(write_only image2d_t tgt_tex)\n{\nint x = get_global_id(0);\nint y = get_global_id(1);\nwrite_imagef(tgt_tex, (int2)(x, y), (float4)(0.1 * x, 0.0f, 0.0f, 0.0f));}";
+    //kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}\n\nkernel void tex_test(write_only image2d_t tgt_tex)\n{\nint x = get_global_id(0);\nint y = get_global_id(1);\nwrite_imagef(tgt_tex, (int2)(x, y), (float4)(0.1 * x, 0.0f, 0.0f, 0.0f));\n}";
+    kernel_source = ReadFile2("C:/Repos/2D_Fluids/Glitter/Sources/gpu_src/test.cl");
     sources.push_back({ kernel_source.c_str(), kernel_source.length() });
 
     // Build program and compile
@@ -174,7 +175,7 @@ int main(int argc, char * argv[]) {
 
 #ifdef TEXTURE_TEST
     tester = cl::Kernel(program, "tex_test");
-    //tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
+    tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
 #else
     tester = cl::Kernel(program, "test");
     tester(cl::EnqueueArgs(queue, global), test_buffer).wait();

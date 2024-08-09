@@ -22,3 +22,30 @@ inline std::string ReadFile(const char* f_name = "kernels.cl")
 		return text;
 	}
 }
+
+inline std::string ReadFile2(const char* f_name = "kernels.cl")
+{
+    std::string kernel_code;
+    std::ifstream kernel_file;
+    // ensure ifstream objects can throw exceptions:
+    kernel_file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    try
+    {
+        // open file
+        kernel_file.open(f_name);
+        std::stringstream kernel_stream;
+        // read file's buffer content into stream
+        kernel_stream << kernel_file.rdbuf();
+        // close file handlers
+        kernel_file.close();
+        // convert stream into string
+        kernel_code = kernel_stream.str();
+    }
+    catch (std::ifstream::failure& e)
+    {
+        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << std::endl;
+    }
+    
+    // return char sequence
+    return kernel_code.c_str();
+}
