@@ -73,7 +73,7 @@ int main(int argc, char * argv[]) {
     }
 
     // Create OpenCL Image
-    target_texture = cl::Image2D(context, CL_MEM_READ_ONLY, cl::ImageFormat(CL_RGBA, CL_FLOAT), mWidth, mHeight);
+    //target_texture = cl::Image2D(context, CL_MEM_READ_WRITE, cl::ImageFormat(CL_RGBA, CL_FLOAT), mWidth, mHeight);
 
     queue = cl::CommandQueue(context, default_device);
 
@@ -118,19 +118,6 @@ int main(int argc, char * argv[]) {
     
     test_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
 
-#ifdef TEXTURE_TEST
-    tester = cl::Kernel(program, "tex_test");
-    tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
-#else
-    tester = cl::Kernel(program, "test");
-    tester(cl::EnqueueArgs(queue, global), test_buffer).wait();
-
-    int test_c[10];
-    queue.enqueueReadBuffer(test_buffer, CL_TRUE, 0, sizeof(int) * 10, &test_c);
-
-    std::cout << test_c[0] << test_c[1] << test_c[2] << std::endl;
-#endif // TEXTURE_TEST
-
     // OpenGL shaders
     Shader simple_shader("C:/Repos/2D_Fluids/Glitter/Shaders/simple_shader.vs", "C:/Repos/2D_Fluids/Glitter/Shaders/simple_shader.fs");
 
@@ -159,18 +146,51 @@ int main(int argc, char * argv[]) {
     glEnableVertexAttribArray(2);
 
     // OpenGL texture
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+    unsigned int gl_texture;
+    glGenTextures(1, &gl_texture);
+    glBindTexture(GL_TEXTURE_2D, gl_texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
     // set the texture wrapping parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Set empty
+    std::vector<GLubyte> emptyData(mWidth * mHeight * 4, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, &emptyData[0]);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
-    //glBindBuffer(GL_PIXEL_UNPACK_BUFFER, myVBO);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mWidth, mHeight, GL_RGBA, GL_FLOAT, NULL);
+    target_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_texture, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
+    // Flush GL queue        
+    glFinish();
+    glFlush();
+
+    // Acquire shared objects
+    err = clEnqueueAcquireGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+
+#ifdef TEXTURE_TEST
+    tester = cl::Kernel(program, "tex_test");
+    //tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
+#else
+    tester = cl::Kernel(program, "test");
+    tester(cl::EnqueueArgs(queue, global), test_buffer).wait();
+
+    int test_c[10];
+    queue.enqueueReadBuffer(test_buffer, CL_TRUE, 0, sizeof(int) * 10, &test_c);
+
+    std::cout << test_c[0] << test_c[1] << test_c[2] << std::endl;
+#endif // TEXTURE_TEST
+
+    // Release shared objects                                                          
+    err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+
+    // Flush CL queue                                                           
+    err = clFinish(queue());
 
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
@@ -183,7 +203,7 @@ int main(int argc, char * argv[]) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // bind Texture
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, gl_texture);
 
         // render container
         simple_shader.use();
