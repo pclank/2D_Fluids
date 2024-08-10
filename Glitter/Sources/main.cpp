@@ -198,7 +198,11 @@ int main(int argc, char * argv[]) {
     tester(cl::EnqueueArgs(queue, global_test), target_texture).wait();
 
     debug_tester = cl::Kernel(program, "tex_read_test");
-    debug_tester(cl::EnqueueArgs(queue, global_tex), target_texture, debug_buffer);
+    //debug_tester(cl::EnqueueArgs(queue, global_tex), target_texture, debug_buffer);
+    debug_tester(cl::EnqueueArgs(queue, global_test), target_texture, debug_buffer);
+
+    // We have to generate the mipmaps again!!!
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     float test_c[10];
     queue.enqueueReadBuffer(debug_buffer, CL_TRUE, 0, sizeof(float) * 10, &test_c);

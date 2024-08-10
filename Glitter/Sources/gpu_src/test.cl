@@ -11,8 +11,8 @@ kernel void tex_test(write_only image2d_t tgt_tex)
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
-	//write_imagef(tgt_tex, (int2)(x, y), (float4)(0.1f * x, 0.1f * y, 0.0f, 1.0f));
-	write_imagef(tgt_tex, (int2)(x, y), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt_tex, (int2)(x, y), (float4)(0.001f * x, 0.001f * y, 0.0f, 1.0f));
+	//write_imagef(tgt_tex, (int2)(x, y), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
 }
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
