@@ -24,8 +24,10 @@ cl::Program::Sources sources;
 cl::CommandQueue queue;
 cl::Program program;
 cl::Buffer test_buffer;
+cl::Buffer debug_buffer;
 cl::Kernel test_kernel;
-cl::NDRange global_tex(mWidth * mHeight);
+cl::Kernel debug_kernel;
+cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
 
 float hardcoded_vertices[] = {
@@ -41,10 +43,13 @@ unsigned int indices[] = {
     1, 2, 3  // second triangle
 };
 
+// Macros
 #define TEXTURE_TEST
+#define LOAD_TEXTURE
 
 #ifdef TEXTURE_TEST
 	cl::make_kernel<cl::Image2D> tester(test_kernel);
+    cl::make_kernel<cl::Image2D, cl::Buffer> debug_tester(debug_kernel);
 #else
 	cl::make_kernel<cl::Buffer> tester(test_kernel);
 #endif // TEXTURE_TEST
@@ -54,7 +59,7 @@ cl::Image2D target_texture;
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.
-//     #define STB_IMAGE_IMPLEMENTATION
+     #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #endif //~ Glitter Header

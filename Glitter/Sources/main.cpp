@@ -117,7 +117,9 @@ int main(int argc, char * argv[]) {
         exit(1);
     }
     
+    // Prepare buffers
     test_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
+    debug_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(float) * mWidth * mHeight);
 
     // OpenGL shaders
     Shader simple_shader("C:/Repos/2D_Fluids/Glitter/Shaders/simple_shader.vs", "C:/Repos/2D_Fluids/Glitter/Shaders/simple_shader.fs");
@@ -156,10 +158,26 @@ int main(int argc, char * argv[]) {
     // set texture filtering parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+#ifdef LOAD_TEXTURE
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/container.jpg", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+#else
     // Set empty
-    std::vector<GLubyte> emptyData(mWidth * mHeight * 4, 0);
+    std::vector<GLubyte> emptyData(mWidth* mHeight * 4, 0);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, &emptyData[0]);
     //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+#endif // LOAD_TEXTURE
+
     glGenerateMipmap(GL_TEXTURE_2D);
 
     target_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_texture, &err);
@@ -175,7 +193,17 @@ int main(int argc, char * argv[]) {
 
 #ifdef TEXTURE_TEST
     tester = cl::Kernel(program, "tex_test");
-    tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
+    //tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
+    cl::NDRange global_test(width, height);
+    tester(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+
+    debug_tester = cl::Kernel(program, "tex_read_test");
+    debug_tester(cl::EnqueueArgs(queue, global_tex), target_texture, debug_buffer);
+
+    float test_c[10];
+    queue.enqueueReadBuffer(debug_buffer, CL_TRUE, 0, sizeof(float) * 10, &test_c);
+
+    std::cout << test_c[0] << test_c[1] << test_c[2] << std::endl;
 #else
     tester = cl::Kernel(program, "test");
     tester(cl::EnqueueArgs(queue, global), test_buffer).wait();
@@ -190,8 +218,9 @@ int main(int argc, char * argv[]) {
     err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
 
-    // Flush CL queue                                                           
+    // Flush CL queue
     err = clFinish(queue());
+    std::cout << "Finished CL queue with err:\t" << err << std::endl;
 
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
