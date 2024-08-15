@@ -9,9 +9,14 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <CL/cl.hpp>
 
+// Local Headers
+#include <Timer.hpp>
+
 // Define Some Constants
 const int mWidth = 1280;
 const int mHeight = 800;
+
+Timer main_timer;
 
 // **********************************************************************************
 // OpenCL section

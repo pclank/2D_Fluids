@@ -260,11 +260,19 @@ int main(int argc, char * argv[]) {
     err = clFinish(queue());
     std::cout << "Finished CL queue with err:\t" << err << std::endl;
 
+    // Initialize Timer
+    main_timer.Init();
+
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
     {
         if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(mWindow, true);
+
+        // Update Timer
+        main_timer.UpdateTime();
+
+        // TODO: Add imgui stuff!
 
         // Background Fill Color
         glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
@@ -279,7 +287,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
 
         // Run kernels
-        advecter(cl::EnqueueArgs(queue, global_test), 0.1f, 1.0f / 1, target_texture, target_texture, new_vel).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), main_timer.GetDeltaTime(), 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
         // Release shared objects                                                          
