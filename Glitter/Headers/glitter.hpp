@@ -27,6 +27,8 @@ cl::Buffer test_buffer;
 cl::Buffer debug_buffer;
 cl::Kernel test_kernel;
 cl::Kernel debug_kernel;
+cl::Kernel advect_kernel;
+cl::Kernel tex_copy_kernel;
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
 
@@ -48,14 +50,19 @@ unsigned int indices[] = {
 #define LOAD_TEXTURE
 
 #ifdef TEXTURE_TEST
-	cl::make_kernel<cl::Image2D> tester(test_kernel);
-    cl::make_kernel<cl::Image2D, cl::Buffer> debug_tester(debug_kernel);
+cl::make_kernel<cl::Image2D> tester(test_kernel);
+cl::make_kernel<cl::Image2D, cl::Buffer> debug_tester(debug_kernel);
 #else
-	cl::make_kernel<cl::Buffer> tester(test_kernel);
+cl::make_kernel<cl::Buffer> tester(test_kernel);
 #endif // TEXTURE_TEST
+
+cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> advecter(advect_kernel);
+cl::make_kernel<cl::Image2D, cl::Image2D> tex_copier(tex_copy_kernel);
 
 // Images
 cl::Image2D target_texture;
+cl::Image2D old_vel;
+cl::Image2D new_vel;
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.
