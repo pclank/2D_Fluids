@@ -155,7 +155,41 @@ kernel void Divergence(float half_rdx, read_only image2d_t vector_field, write_o
 	write_imagef(out, coords, div);
 }
 
-kernel void Jacobi()
+kernel void Jacobi(float alpha, float rBeta, read_only image2d_t x_vector, read_only image2d_t b_vector, write_only image2d_t x_new)
 {
-	// TODO: Implement!
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	// Neighbors stuff
+	float4 left = read_imagef(x_vector, sampler, coords - (int2)(1, 0));
+	float4 right = read_imagef(x_vector, sampler, coords + (int2)(1, 0));
+	float4 bottom = read_imagef(x_vector, sampler, coords - (int2)(0, 1));
+	float4 top = read_imagef(x_vector, sampler, coords + (int2)(0, 1));
+
+	float4 bC = read_imagef(b_vector, sampler, coords);
+
+	float4 pixel = (left + right + bottom + top + alpha * bC) * rBeta;
+	write_imagef(x_new, coords, pixel);
+}
+
+kernel void Gradient(float half_rdx, read_only image2d_t pressure, read_only image2d_t w, write_only image2d_t u_new)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	// Neighbors stuff
+	//h1texRECTneighbors(p, coords, pL, pR, pB, pT);
+	float4 pressure_left = read_imagef(pressure, sampler, coords - (int2)(1, 0));
+	float4 pressure_right = read_imagef(pressure, sampler, coords + (int2)(1, 0));
+	float4 pressure_bottom = read_imagef(pressure, sampler, coords - (int2)(0, 1));
+	float4 pressure_top = read_imagef(pressure, sampler, coords + (int2)(0, 1));
+
+	// TODO: Give meaning to "x" value
+	float2 grad = (float2)(pressure_right.x - pressure_left.x, pressure_top.x - pressure_bottom.x) * half_rdx;
+
+	float4 u_new_val = read_imagef(w, sampler, coords);
+	u_new_val.xy -= grad;
+	write_imagef(u_new, coords, u_new_val);
 }

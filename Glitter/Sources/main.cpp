@@ -175,6 +175,27 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL pressure textures
+    unsigned int gl_pressure_old;
+    glGenTextures(1, &gl_pressure_old);
+    glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    unsigned int gl_pressure_new;
+    glGenTextures(1, &gl_pressure_new);
+    glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 #ifdef LOAD_TEXTURE
     int width, height, nrChannels;
     //unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/container.jpg", &width, &height, &nrChannels, 0);
@@ -185,6 +206,12 @@ int main(int argc, char * argv[]) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_texture_new);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -208,6 +235,12 @@ int main(int argc, char * argv[]) {
     new_vel = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_texture_new, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
+    old_pressure = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_pressure_old, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
+    new_pressure = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_pressure_new, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
     // Flush GL queue
     glFinish();
     glFlush();
@@ -216,6 +249,10 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
 
 #ifdef TEXTURE_TEST
@@ -234,10 +271,19 @@ int main(int argc, char * argv[]) {
     tex_copier = cl::Kernel(program, "CopyTexture");
     tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
+    // Prepare the rest of the kernels
+    divergencer = cl::Kernel(program, "Divergence");
+    jacobier = cl::Kernel(program, "Jacobi");
+    gradienter = cl::Kernel(program, "Gradient");
+
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_texture_new);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     float test_c[10];
@@ -258,6 +304,10 @@ int main(int argc, char * argv[]) {
     err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
 
     // Flush CL queue
@@ -289,23 +339,32 @@ int main(int argc, char * argv[]) {
         // Acquire shared objects
         err = clEnqueueAcquireGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
 
         // Run kernels
         advecter(cl::EnqueueArgs(queue, global_test), main_timer.GetDeltaTime(), 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_vel, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, new_vel, new_pressure).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
+        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_pressure, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
 
         // Flush CL queue
         err = clFinish(queue());
 
         // bind Texture
-        glBindTexture(GL_TEXTURE_2D, gl_texture);
+        //glBindTexture(GL_TEXTURE_2D, gl_texture);
         glBindTexture(GL_TEXTURE_2D, gl_texture_new);
+        //glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container
