@@ -137,3 +137,25 @@ kernel void CopyTexture(read_only image2d_t a, write_only image2d_t b)
 
 	write_imagef(b, coords, pixel);
 }
+
+kernel void Divergence(float half_rdx, read_only image2d_t vector_field, write_only image2d_t out)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	// Neighbors stuff
+	float4 left = read_imagef(vector_field, sampler, coords - (int2)(1, 0));
+	float4 right = read_imagef(vector_field, sampler, coords + (int2)(1, 0));
+	float4 bottom = read_imagef(vector_field, sampler, coords - (int2)(0, 1));
+	float4 top = read_imagef(vector_field, sampler, coords + (int2)(0, 1));
+
+	float4 div = half_rdx * (right.x - left.x + top.y - bottom.y);
+
+	write_imagef(out, coords, div);
+}
+
+kernel void Jacobi()
+{
+	// TODO: Implement!
+}

@@ -33,6 +33,7 @@ cl::Buffer debug_buffer;
 cl::Kernel test_kernel;
 cl::Kernel debug_kernel;
 cl::Kernel advect_kernel;
+cl::Kernel divergence_kernel;
 cl::Kernel tex_copy_kernel;
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
@@ -63,6 +64,7 @@ cl::make_kernel<cl::Buffer> tester(test_kernel);
 
 cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> advecter(advect_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> tex_copier(tex_copy_kernel);
+cl::make_kernel<float, cl::Image2D, cl::Image2D> divergencer(divergence_kernel);
 
 // Images
 cl::Image2D target_texture;

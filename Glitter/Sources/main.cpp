@@ -3,6 +3,7 @@
 #include <tools.hpp>
 #include <Shader.hpp>
 #include <physics.hpp>
+#include <GUI.hpp>
 
 // System Headers
 #include <glad/glad.h>
@@ -36,6 +37,10 @@ int main(int argc, char * argv[]) {
     glfwMakeContextCurrent(mWindow);
     gladLoadGL();
     fprintf(stderr, "OpenGL %s\n", glGetString(GL_VERSION));
+
+    // Initialize our GUI
+    GUI gui = GUI(mWindow, main_timer);
+    gui.Init();
 
     // OpenCL initialization
     std::vector<cl::Platform> all_platforms;
@@ -101,7 +106,6 @@ int main(int argc, char * argv[]) {
         // If _getcwd returns NULL, print an error message
         std::cerr << "Error getting current working directory" << std::endl;
     }
-
 
     //kernel_source = ReadFile("C:/Repos/2D_Fluids/Build/2D_Fluids/Release/gpu_src/test.cl");
     //kernel_source = "kernel void test(__global int* test_buf){int x = get_global_id(0);\ntest_buf[x] = x;\n}";
@@ -289,8 +293,10 @@ int main(int argc, char * argv[]) {
         // Run kernels
         advecter(cl::EnqueueArgs(queue, global_test), main_timer.GetDeltaTime(), 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_vel, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
-        // Release shared objects                                                          
+        // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
 
@@ -307,10 +313,16 @@ int main(int argc, char * argv[]) {
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+        // Render GUI
+        gui.Render();
+
         // Flip Buffers and Draw
         glfwSwapBuffers(mWindow);
         glfwPollEvents();
     }
+
+    // Cleanup GUI
+    gui.Cleanup();
 
     // Clear buffers
     glDeleteVertexArrays(1, &VAO);
