@@ -193,3 +193,24 @@ kernel void Gradient(float half_rdx, read_only image2d_t pressure, read_only ima
 	u_new_val.xy -= grad;
 	write_imagef(u_new, coords, u_new_val);
 }
+
+kernel void Vorticity(float half_rdx, read_only image2d_t u, write_only image2d_t vort)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	// Neighbors stuff
+	float4 uL = read_imagef(u, sampler, coords - (int2)(1, 0));
+	float4 uR = read_imagef(u, sampler, coords + (int2)(1, 0));
+	float4 uB = read_imagef(u, sampler, coords - (int2)(0, 1));
+	float4 uT = read_imagef(u, sampler, coords + (int2)(0, 1));
+
+	float4 vort_val = (float4)(half_rdx * ((uR.y - uL.y) - (uT.x - uB.x)));
+	write_imagef(vort, coords, vort_val);
+}
+
+kernel void VorticityConfinement()
+{
+	// TODO: Implement!
+}
