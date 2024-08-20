@@ -210,7 +210,86 @@ kernel void Vorticity(float half_rdx, read_only image2d_t u, write_only image2d_
 	write_imagef(vort, coords, vort_val);
 }
 
-kernel void VorticityConfinement()
+kernel void VorticityConfinement(float half_rdx, float timestep, float dxscale_x, float dxscale_y, read_only image2d_t vort, read_only image2d_t u, write_only image2d_t uNew)
 {
-	// TODO: Implement!
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 dxscale = (float4)(dxscale_x, dxscale_y, dxscale_x, dxscale_y);
+
+	// Neighbors stuff
+	float4 vL = read_imagef(vort, sampler, coords - (int2)(1, 0));
+	float4 vR = read_imagef(vort, sampler, coords + (int2)(1, 0));
+	float4 vB = read_imagef(vort, sampler, coords - (int2)(0, 1));
+	float4 vT = read_imagef(vort, sampler, coords + (int2)(0, 1));
+
+	float4 vC = read_imagef(vort, sampler, coords);
+
+	float4 force = half_rdx * (float4)(fabs(vT.x) - fabs(vB.x), fabs(vR.x) - fabs(vL.x), fabs(vT.x) - fabs(vB.x), fabs(vR.x) - fabs(vL.x));
+
+	// safe normalize
+	float EPSILON = 2.4414e-4; // 2^-12
+	float magSqr = max(EPSILON, dot(force, force));
+	force = force * rsqrt(magSqr);
+
+	force *= dxscale * vC * (float4)(1, -1, 1, -1);
+
+	float4 uNew_val = read_imagef(u, sampler, coords);
+
+	uNew_val += timestep * force;
+
+	uint seed = x + y * get_image_width(vort);
+	//uNew_val = -normalize(uNew_val) * (float4)(AdvancedRandomFloat(seed));
+
+	write_imagef(uNew, coords, uNew_val);
+}
+
+kernel void Boundary(float scale, read_only image2d_t u, write_only image2d_t uNew)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 bv = read_imagef(u, sampler, coords);
+	if (coords.x == 0)
+		bv.x = 0.0f;
+	else if (coords.x == get_image_width(u) - 1)
+		bv.x = 0.0f;
+
+	if (coords.y == 0)
+		bv.y = 0.0f;
+	else if (coords.y == get_image_width(u) - 1)
+		bv.y = 0.0f;
+
+	//bv = scale * read_imagef(u, sampler, coords);
+
+	write_imagef(uNew, coords, bv);
+}
+
+kernel void DisplayConvert(read_only image2d_t src, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 src_val = read_imagef(src, sampler, coords);
+
+	src_val.x = (src_val.x < 0.0f) ? -src_val.x : src_val.x;
+	src_val.y = (src_val.y < 0.0f) ? -src_val.y : src_val.y;
+	src_val.z = (src_val.z < 0.0f) ? -src_val.z : src_val.z;
+
+	write_imagef(tgt, coords, src_val);
+}
+
+kernel void Mix(float bias, read_only image2d_t t1, read_only image2d_t t2, write_only image2d_t t3)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 t1_val = read_imagef(t1, sampler, coords);
+	float4 t2_val = read_imagef(t2, sampler, coords);
+
+	write_imagef(t3, coords, bias * t1_val - t2_val);
 }

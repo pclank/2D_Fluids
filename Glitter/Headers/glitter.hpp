@@ -37,6 +37,10 @@ cl::Kernel divergence_kernel;
 cl::Kernel jacobi_kernel;
 cl::Kernel gradient_kernel;
 cl::Kernel vorticity_kernel;
+cl::Kernel vorticity_confiner_kernel;
+cl::Kernel display_convert_kernel;
+cl::Kernel boundary_kernel;
+cl::Kernel mix_kernel;
 cl::Kernel tex_copy_kernel;
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
@@ -71,6 +75,10 @@ cl::make_kernel<float, cl::Image2D, cl::Image2D> divergencer(divergence_kernel);
 cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> jacobier(divergence_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D, cl::Image2D> gradienter(gradient_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D> vorticitier(vorticity_kernel);
+cl::make_kernel<float, float, float, float, cl::Image2D, cl::Image2D, cl::Image2D> vorticity_confiner(vorticity_confiner_kernel);
+cl::make_kernel<float, cl::Image2D, cl::Image2D> boundarier(boundary_kernel);
+cl::make_kernel<cl::Image2D, cl::Image2D> display_converter(display_convert_kernel);
+cl::make_kernel<float, cl::Image2D, cl::Image2D, cl::Image2D> mixer(mix_kernel);
 
 // Images
 cl::Image2D target_texture;
@@ -79,6 +87,7 @@ cl::Image2D new_vel;
 cl::Image2D old_pressure;
 cl::Image2D new_pressure;
 cl::Image2D vorticity;
+cl::Image2D display_texture;
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.

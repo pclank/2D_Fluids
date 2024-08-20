@@ -207,6 +207,17 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL display texture
+    unsigned int gl_display;
+    glGenTextures(1, &gl_display);
+    glBindTexture(GL_TEXTURE_2D, gl_display);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 #ifdef LOAD_TEXTURE
     int width, height, nrChannels;
     //unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/container.jpg", &width, &height, &nrChannels, 0);
@@ -226,6 +237,9 @@ int main(int argc, char * argv[]) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_display);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
@@ -258,6 +272,9 @@ int main(int argc, char * argv[]) {
     vorticity = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_vorticity, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
+    display_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_display, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
     // Flush GL queue
     glFinish();
     glFlush();
@@ -272,6 +289,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
 
 #ifdef TEXTURE_TEST
@@ -295,6 +314,10 @@ int main(int argc, char * argv[]) {
     jacobier = cl::Kernel(program, "Jacobi");
     gradienter = cl::Kernel(program, "Gradient");
     vorticitier = cl::Kernel(program, "Vorticity");
+    vorticity_confiner = cl::Kernel(program, "VorticityConfinement");
+    boundarier = cl::Kernel(program, "Boundary");
+    display_converter = cl::Kernel(program, "DisplayConvert");
+    mixer = cl::Kernel(program, "Mix");
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -306,6 +329,8 @@ int main(int argc, char * argv[]) {
     glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_display);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     float test_c[10];
@@ -332,6 +357,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
 
     // Flush CL queue
@@ -366,6 +393,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Run kernels
         advecter(cl::EnqueueArgs(queue, global_test), main_timer.GetDeltaTime(), 1.0f / 1, target_texture, target_texture, new_vel).wait();
@@ -373,10 +401,18 @@ int main(int argc, char * argv[]) {
         divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_vel, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, new_vel, new_pressure).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
         gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_pressure, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_vel, vorticity).wait();
+        vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / 1, main_timer.GetDeltaTime(), 1.0f, 1.0f, vorticity, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // Display stuff
+        mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
+        //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
@@ -384,6 +420,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Flush CL queue
         err = clFinish(queue());
@@ -392,7 +429,8 @@ int main(int argc, char * argv[]) {
         //glBindTexture(GL_TEXTURE_2D, gl_texture);
         //glBindTexture(GL_TEXTURE_2D, gl_texture_new);
         //glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
-        glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+        //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+        glBindTexture(GL_TEXTURE_2D, gl_display);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container
