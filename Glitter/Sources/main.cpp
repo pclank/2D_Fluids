@@ -293,21 +293,28 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
 
+    cl::NDRange global_test(width, height);
+    cl::NDRange global_1D(width * height);
+    
+#ifdef RAND_TEX
+    // Texture randomizer
+    tex_randomizer = cl::Kernel(program, "RandomizeTexture");
+    tex_randomizer(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+    tex_randomizer(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+#endif // RAND_TEX
+
 #ifdef TEXTURE_TEST
     tester = cl::Kernel(program, "tex_test");
-    //tester(cl::EnqueueArgs(queue, global_tex), target_texture).wait();
-    cl::NDRange global_test(width, height);
-    //tester(cl::EnqueueArgs(queue, global_test), target_texture).wait();
 
     debug_tester = cl::Kernel(program, "tex_read_test");
     //debug_tester(cl::EnqueueArgs(queue, global_tex), target_texture, debug_buffer);
     debug_tester(cl::EnqueueArgs(queue, global_test), target_texture, debug_buffer);
 
     advecter = cl::Kernel(program, "AvectFluid");
-    advecter(cl::EnqueueArgs(queue, global_test), 0.1f, 1.0f / 1, target_texture, target_texture, new_vel).wait();
+    //advecter(cl::EnqueueArgs(queue, global_test), 0.1f, 1.0f / 1, target_texture, target_texture, new_vel).wait();
 
     tex_copier = cl::Kernel(program, "CopyTexture");
-    tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+    //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
     // Prepare the rest of the kernels
     divergencer = cl::Kernel(program, "Divergence");
@@ -316,8 +323,10 @@ int main(int argc, char * argv[]) {
     vorticitier = cl::Kernel(program, "Vorticity");
     vorticity_confiner = cl::Kernel(program, "VorticityConfinement");
     boundarier = cl::Kernel(program, "Boundary");
+    //boundarier = cl::Kernel(program, "NeumannBoundary");
     display_converter = cl::Kernel(program, "DisplayConvert");
     mixer = cl::Kernel(program, "Mix");
+    force_randomizer = cl::Kernel(program, "RandomForce");
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -367,7 +376,7 @@ int main(int argc, char * argv[]) {
 
     // Initialize Timer
     main_timer.Init();
-
+    
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
     {
@@ -377,7 +386,11 @@ int main(int argc, char * argv[]) {
         // Update Timer
         main_timer.UpdateTime();
 
-        // TODO: Add imgui stuff!
+#ifdef STD_TIMESTEP
+        float time_step = 1.0f;
+#else
+        float time_step = main_timer.GetDeltaTime();
+#endif // STD_TIMESTEP
 
         // Background Fill Color
         glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
@@ -395,24 +408,46 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
+        // Random force
+        if (gui.IsForceEnabled())
+        {
+            force_randomizer(cl::EnqueueArgs(queue, global_test), gui.GetForceScale(), gui.GetForceDirFlag(), target_texture, new_vel).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+            //force_randomizer(cl::EnqueueArgs(queue, global_test), gui.GetForceScale(), old_pressure, new_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
+        }
+
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
         // Run kernels
-        advecter(cl::EnqueueArgs(queue, global_test), main_timer.GetDeltaTime(), 1.0f / 1, target_texture, target_texture, new_vel).wait();
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+            jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, target_texture, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+        }
+
+        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_vel, new_vel).wait();
+
+        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_pressure, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-        jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, new_vel, new_pressure).wait();
+
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
-        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_pressure, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef VORTICITY
         vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_vel, vorticity).wait();
         vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / 1, main_timer.GetDeltaTime(), 1.0f, 1.0f, vorticity, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-        boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // VORTICITY
 
         // Display stuff
-        mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
-        //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+        //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
+        display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);

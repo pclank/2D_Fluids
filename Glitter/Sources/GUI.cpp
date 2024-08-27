@@ -4,7 +4,11 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     :
     p_window(pWindow),
     m_timer(timer)
-{ }
+{
+    rand_force = false;
+    rand_force_dir = 0;
+    force_scale = 0.5f;
+}
 
 void GUI::Init()
 {
@@ -34,6 +38,9 @@ void GUI::Render()
     ImGui::Begin("Control Window");
     ImGui::Text("DeltaTime: %f", m_timer.GetDeltaTime());
     ImGui::Text("FPS: %.2f", m_timer.GetFPS());
+    ImGui::Checkbox("Add Random Force", &rand_force);
+    ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
+    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.01f, 1.0f, "%.2f");
     ImGui::Text("Use SPACEBAR to enable/disable cursor!");
     ImGui::End();
 
@@ -46,6 +53,21 @@ void GUI::Cleanup()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+}
+
+bool GUI::IsForceEnabled()
+{
+    return rand_force;
+}
+
+float GUI::GetForceScale()
+{
+    return force_scale;
+}
+
+bool GUI::GetForceDirFlag()
+{
+    return rand_force_dir;
 }
 
 //void GUI::GuiButtonCallback(GUI_BUTTON button)

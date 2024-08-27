@@ -40,6 +40,8 @@ cl::Kernel vorticity_kernel;
 cl::Kernel vorticity_confiner_kernel;
 cl::Kernel display_convert_kernel;
 cl::Kernel boundary_kernel;
+cl::Kernel tex_randomize_kernel;
+cl::Kernel force_randomize_kernel;
 cl::Kernel mix_kernel;
 cl::Kernel tex_copy_kernel;
 cl::NDRange global_tex(mWidth, mHeight);
@@ -61,6 +63,10 @@ unsigned int indices[] = {
 // Macros
 #define TEXTURE_TEST
 #define LOAD_TEXTURE
+//#define RAND_TEX
+#define STD_TIMESTEP
+#define VORTICITY
+#define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST
 cl::make_kernel<cl::Image2D> tester(test_kernel);
@@ -79,6 +85,8 @@ cl::make_kernel<float, float, float, float, cl::Image2D, cl::Image2D, cl::Image2
 cl::make_kernel<float, cl::Image2D, cl::Image2D> boundarier(boundary_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> display_converter(display_convert_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D, cl::Image2D> mixer(mix_kernel);
+cl::make_kernel<cl::Image2D> tex_randomizer(tex_randomize_kernel);
+cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
 
 // Images
 cl::Image2D target_texture;
