@@ -329,7 +329,7 @@ kernel void Mix(float bias, read_only image2d_t t1, read_only image2d_t t2, writ
 	float4 t1_val = read_imagef(t1, sampler, coords);
 	float4 t2_val = read_imagef(t2, sampler, coords);
 
-	write_imagef(t3, coords, bias * t1_val - t2_val);
+	write_imagef(t3, coords, bias * t1_val - (1.0f - bias) * t2_val);
 }
 
 kernel void RandomizeTexture(write_only image2d_t tgt)

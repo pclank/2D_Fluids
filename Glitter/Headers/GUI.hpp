@@ -48,6 +48,12 @@ public:
     /// <returns>: the flag</returns>
     bool GetForceDirFlag();
 
+    /// <summary>
+    /// Returns the bias for the display texture mixing
+    /// </summary>
+    /// <returns>: the bias</returns>
+    float GetMixBias();
+
 //private:
     /// <summary>
     /// The GUI callback is used to update our reference's state using the GUI_BUTTON enum
@@ -60,4 +66,5 @@ private:
     bool rand_force;
     bool rand_force_dir;
     float force_scale;
+    float mix_bias;
 };

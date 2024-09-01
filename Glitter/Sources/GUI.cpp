@@ -8,6 +8,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     rand_force = false;
     rand_force_dir = 0;
     force_scale = 0.5f;
+    mix_bias = 0.5f;
 }
 
 void GUI::Init()
@@ -41,6 +42,7 @@ void GUI::Render()
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
     ImGui::SliderFloat("Random Force Scale", &force_scale, 0.01f, 1.0f, "%.2f");
+    ImGui::SliderFloat("Mix Bias", &mix_bias, 0.01f, 1.0f, "%.2f");
     ImGui::Text("Use SPACEBAR to enable/disable cursor!");
     ImGui::End();
 
@@ -68,6 +70,11 @@ float GUI::GetForceScale()
 bool GUI::GetForceDirFlag()
 {
     return rand_force_dir;
+}
+
+float GUI::GetMixBias()
+{
+    return mix_bias;
 }
 
 //void GUI::GuiButtonCallback(GUI_BUTTON button)

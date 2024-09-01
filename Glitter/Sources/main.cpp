@@ -485,7 +485,8 @@ int main(int argc, char * argv[]) {
 
         // Display stuff
         //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
-        display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+        mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
+        //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
 
         // Negative checks
         //tex_neg_randomizer(cl::EnqueueArgs(queue, global_test), new_vel).wait();
@@ -505,9 +506,9 @@ int main(int argc, char * argv[]) {
         // bind Texture
         //glBindTexture(GL_TEXTURE_2D, gl_texture);
         //glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+        //glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        //glBindTexture(GL_TEXTURE_2D, gl_display);
+        glBindTexture(GL_TEXTURE_2D, gl_display);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container
