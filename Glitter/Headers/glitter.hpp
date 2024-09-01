@@ -66,6 +66,7 @@ unsigned int indices[] = {
 //#define RAND_TEX
 #define STD_TIMESTEP
 #define VORTICITY
+#define NEUMANN_BOUND
 #define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST

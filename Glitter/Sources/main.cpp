@@ -242,6 +242,25 @@ int main(int argc, char * argv[]) {
         glBindTexture(GL_TEXTURE_2D, gl_display);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+
+        /*glBindTexture(GL_TEXTURE_2D, gl_texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_texture_new);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_display);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);*/
     }
     else
     {
@@ -322,8 +341,11 @@ int main(int argc, char * argv[]) {
     gradienter = cl::Kernel(program, "Gradient");
     vorticitier = cl::Kernel(program, "Vorticity");
     vorticity_confiner = cl::Kernel(program, "VorticityConfinement");
+#ifdef NEUMANN_BOUND
+    boundarier = cl::Kernel(program, "NeumannBoundary");
+#else
     boundarier = cl::Kernel(program, "Boundary");
-    //boundarier = cl::Kernel(program, "NeumannBoundary");
+#endif // NEUMANN_BOUND
     display_converter = cl::Kernel(program, "DisplayConvert");
     mixer = cl::Kernel(program, "Mix");
     force_randomizer = cl::Kernel(program, "RandomForce");
@@ -433,11 +455,19 @@ int main(int argc, char * argv[]) {
         gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_pressure, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
         boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#endif // NEUMANN_BOUND
 
 #ifdef VORTICITY
         vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_vel, vorticity).wait();
@@ -463,7 +493,7 @@ int main(int argc, char * argv[]) {
         // bind Texture
         //glBindTexture(GL_TEXTURE_2D, gl_texture);
         //glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        //glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
+        //glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
         glBindTexture(GL_TEXTURE_2D, gl_display);
         glGenerateMipmap(GL_TEXTURE_2D);

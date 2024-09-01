@@ -314,7 +314,7 @@ kernel void DisplayConvert(read_only image2d_t src, write_only image2d_t tgt)
 
 	src_val.x = (src_val.x < 0.0f) ? -src_val.x : src_val.x;
 	src_val.y = (src_val.y < 0.0f) ? -src_val.y : src_val.y;
-	src_val.z = 1.0f;
+	//src_val.z = 1.0f;
 
 	write_imagef(tgt, coords, src_val);
 }
