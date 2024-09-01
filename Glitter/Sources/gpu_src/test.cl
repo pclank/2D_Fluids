@@ -150,7 +150,8 @@ kernel void Divergence(float half_rdx, read_only image2d_t vector_field, write_o
 	float4 bottom = read_imagef(vector_field, sampler, coords - (int2)(0, 1));
 	float4 top = read_imagef(vector_field, sampler, coords + (int2)(0, 1));
 
-	float4 div = half_rdx * (right.x - left.x + top.y - bottom.y);
+	//float4 div = (float4)(half_rdx * (right.x - left.x + top.y - bottom.y));
+	float4 div = (float4)((right.x - left.x + top.y - bottom.y));
 
 	write_imagef(out, coords, div);
 }
@@ -169,7 +170,7 @@ kernel void Jacobi(float alpha, float rBeta, read_only image2d_t x_vector, read_
 
 	float4 bC = read_imagef(b_vector, sampler, coords);
 
-	float4 pixel = (left + right + bottom + top + alpha * bC) * rBeta;
+	float4 pixel = (left + right + bottom + top + (alpha * bC)) * rBeta;
 	write_imagef(x_new, coords, pixel);
 }
 
@@ -267,6 +268,42 @@ kernel void Boundary(float scale, read_only image2d_t u, write_only image2d_t uN
 	write_imagef(uNew, coords, bv);
 }
 
+kernel void NeumannBoundary(float scale, read_only image2d_t u, write_only image2d_t uNew)
+{
+	int x = get_global_id(0);
+
+	int case_d = x / get_image_width(u);
+	int rest = x - case_d * get_image_width(u);
+
+	int2 coords = (int2)(0);
+	int2 offset = (int2)(0);
+
+	if (case_d == 0)
+	{
+		coords = (int2)(0, rest);
+		offset = (int2)(1, 0);
+	}
+	else if (case_d == 1)
+	{
+		coords = (int2)(get_image_width(u) - 1, rest);
+		offset = (int2)(-1, 0);
+	}
+	else if (case_d == 2)
+	{
+		coords = (int2)(rest, get_image_width(u) - 1);
+		offset = (int2)(0, -1);
+	}
+	else if (case_d == 3)
+	{
+		coords = (int2)(rest, 0);
+		offset = (int2)(0, 1);
+	}
+
+	float4 bv = scale * read_imagef(u, sampler, coords + offset);
+
+	write_imagef(uNew, coords, bv);
+}
+
 kernel void DisplayConvert(read_only image2d_t src, write_only image2d_t tgt)
 {
 	int x = get_global_id(0);
@@ -277,7 +314,7 @@ kernel void DisplayConvert(read_only image2d_t src, write_only image2d_t tgt)
 
 	src_val.x = (src_val.x < 0.0f) ? -src_val.x : src_val.x;
 	src_val.y = (src_val.y < 0.0f) ? -src_val.y : src_val.y;
-	src_val.z = (src_val.z < 0.0f) ? -src_val.z : src_val.z;
+	//src_val.z = 1.0f;
 
 	write_imagef(tgt, coords, src_val);
 }
@@ -292,4 +329,49 @@ kernel void Mix(float bias, read_only image2d_t t1, read_only image2d_t t2, writ
 	float4 t2_val = read_imagef(t2, sampler, coords);
 
 	write_imagef(t3, coords, bias * t1_val - t2_val);
+}
+
+kernel void RandomizeTexture(write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	uint seed = x + y * get_image_width(tgt);
+	float4 tgt_val = (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+
+	write_imagef(tgt, coords, tgt_val);
+}
+
+kernel void RandomForce(float scale, int dir_flag, read_only image2d_t src, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	uint seed = x + y * get_image_width(tgt);
+
+	/*if (AdvancedRandomFloat(seed) < 0.2f)
+		return;*/
+
+	float4 src_val = read_imagef(src, sampler, coords);
+	float4 tgt_val = src_val + scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+
+	// Randomize Direction
+	if (dir_flag == 1)
+	{
+		float dir_val = AdvancedRandomFloat(seed);
+
+		if (dir_val < 0.2f)
+			tgt_val.x = -tgt_val.x;
+		else if (dir_val >= 0.2f && dir_val < 0.4f)
+			tgt_val.y = -tgt_val.y;
+		else if (dir_val >= 0.4f)
+		{
+			tgt_val.x = -tgt_val.x;
+			tgt_val.y = -tgt_val.y;
+		}
+	}
+
+	write_imagef(tgt, coords, tgt_val);
 }

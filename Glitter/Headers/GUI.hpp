@@ -30,6 +30,24 @@ public:
     /// </summary>
     void Cleanup();
 
+    /// <summary>
+    /// Whether the random force flag is enabled
+    /// </summary>
+    /// <returns>: the flag</returns>
+    bool IsForceEnabled();
+
+    /// <summary>
+    /// Returns the scale of the random force
+    /// </summary>
+    /// <returns>: the scale</returns>
+    float GetForceScale();
+    
+    /// <summary>
+    /// Whether the random force direction should be randomized
+    /// </summary>
+    /// <returns>: the flag</returns>
+    bool GetForceDirFlag();
+
 //private:
     /// <summary>
     /// The GUI callback is used to update our reference's state using the GUI_BUTTON enum
@@ -39,4 +57,7 @@ public:
 private:
     GLFWwindow* p_window;
     Timer& m_timer;
+    bool rand_force;
+    bool rand_force_dir;
+    float force_scale;
 };
