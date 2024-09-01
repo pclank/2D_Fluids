@@ -44,6 +44,8 @@ cl::Kernel tex_randomize_kernel;
 cl::Kernel force_randomize_kernel;
 cl::Kernel mix_kernel;
 cl::Kernel tex_copy_kernel;
+cl::Kernel tex_neg_randomize_kernel;
+cl::Kernel neg_check_kernel;
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
 
@@ -87,6 +89,8 @@ cl::make_kernel<float, cl::Image2D, cl::Image2D> boundarier(boundary_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> display_converter(display_convert_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D, cl::Image2D> mixer(mix_kernel);
 cl::make_kernel<cl::Image2D> tex_randomizer(tex_randomize_kernel);
+cl::make_kernel<cl::Image2D> tex_neg_randomizer(tex_neg_randomize_kernel);
+cl::make_kernel<cl::Image2D, cl::Image2D> neg_checker(neg_check_kernel);
 cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
 
 // Images

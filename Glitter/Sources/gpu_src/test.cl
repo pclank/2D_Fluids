@@ -79,6 +79,7 @@ kernel void tex_test(write_only image2d_t tgt_tex)
 }
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
+//__constant sampler_t sampler = CLK_FILTER_NEAREST;
 
 kernel void tex_read_test(read_only image2d_t tgt_tex, __global float* debug_buf)
 {
@@ -340,6 +341,36 @@ kernel void RandomizeTexture(write_only image2d_t tgt)
 	uint seed = x + y * get_image_width(tgt);
 	float4 tgt_val = (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
 
+	write_imagef(tgt, coords, tgt_val);
+}
+
+kernel void RandomizeNegativeTexture(write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	uint seed = x + y * get_image_width(tgt);
+
+	float4 tgt_val = (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+
+	if (AdvancedRandomFloat(seed) < 0.5f)
+		tgt_val = -tgt_val;
+
+	tgt_val.z = 1.0f;
+
+	write_imagef(tgt, coords, tgt_val);
+}
+
+kernel void CheckNegativeValues(read_only image2d_t src, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 val = read_imagef(src, sampler, coords);
+
+	float4 tgt_val = (val.x < 0.0f) ? (float4)(1.0f, 0.0f, 0.0f, 1.0f) : (float4)(0.0f, 1.0f, 0.0f, 1.0f);
 	write_imagef(tgt, coords, tgt_val);
 }
 

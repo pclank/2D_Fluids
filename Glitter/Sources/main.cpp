@@ -225,22 +225,22 @@ int main(int argc, char * argv[]) {
     if (data)
     {
         glBindTexture(GL_TEXTURE_2D, gl_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_display);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         /*glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -293,6 +293,12 @@ int main(int argc, char * argv[]) {
 
     display_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_display, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
+    cl_image_format form;
+    clGetImageInfo(display_texture(), CL_IMAGE_FORMAT, sizeof(cl_image_format), &form, NULL);
+    std::cout << form.image_channel_data_type << std::endl;
+    /*CL_UNORM_INT8
+    CL_FLOAT*/
 
     // Flush GL queue
     glFinish();
@@ -349,6 +355,8 @@ int main(int argc, char * argv[]) {
     display_converter = cl::Kernel(program, "DisplayConvert");
     mixer = cl::Kernel(program, "Mix");
     force_randomizer = cl::Kernel(program, "RandomForce");
+    tex_neg_randomizer = cl::Kernel(program, "RandomizeNegativeTexture");
+    neg_checker = cl::Kernel(program, "CheckNegativeValues");
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -479,6 +487,10 @@ int main(int argc, char * argv[]) {
         //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
         display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
 
+        // Negative checks
+        //tex_neg_randomizer(cl::EnqueueArgs(queue, global_test), new_vel).wait();
+        //neg_checker(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
@@ -493,9 +505,9 @@ int main(int argc, char * argv[]) {
         // bind Texture
         //glBindTexture(GL_TEXTURE_2D, gl_texture);
         //glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        //glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+        glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glBindTexture(GL_TEXTURE_2D, gl_display);
+        //glBindTexture(GL_TEXTURE_2D, gl_display);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container
