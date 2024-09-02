@@ -16,6 +16,13 @@
 #include <direct.h>
 #include <wingdi.h>
 
+GUI* gui_pointer;
+
+// Callbacks
+void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
 int main(int argc, char * argv[]) {
 
     // Load GLFW and Create a Window
@@ -41,6 +48,12 @@ int main(int argc, char * argv[]) {
     // Initialize our GUI
     GUI gui = GUI(mWindow, main_timer);
     gui.Init();
+    gui_pointer = &gui;
+
+    // OpenGL Callback Functions
+    glfwSetCursorPosCallback(mWindow, CursorPositionCallback);
+    glfwSetMouseButtonCallback(mWindow, MouseButtonCallback);
+    glfwSetKeyCallback(mWindow, KeyboardCallback);
 
     // OpenCL initialization
     std::vector<cl::Platform> all_platforms;
@@ -535,4 +548,55 @@ int main(int argc, char * argv[]) {
     glfwTerminate();
 
     return EXIT_SUCCESS;
+}
+
+/// <summary>
+/// Callback function for mouse cursor movement
+/// </summary>
+/// <param name="window"></param>
+/// <param name="xpos"></param>
+/// <param name="ypos"></param>
+void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
+{
+    gui_pointer->MousePositionUpdate(xpos, ypos);
+
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+
+/// <summary>
+/// Callback function for mouse button press
+/// </summary>
+/// <param name="window"></param>
+/// <param name="button"></param>
+/// <param name="action"></param>
+/// <param name="mods"></param>
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        std::cout << "MOUSE CLICK on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
+        // TODO: Add functionality!
+    }
+}
+
+/// <summary>
+/// Callback Function for keyboard button press
+/// </summary>
+/// <param name="window"></param>
+/// <param name="key"></param>
+/// <param name="scancode"></param>
+/// <param name="action"></param>
+/// <param name="mods"></param>
+void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    // Enable/Disable Cursor
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    {
+        if (gui_pointer->cursor_enabled)
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        else
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+
+        gui_pointer->cursor_enabled = !gui_pointer->cursor_enabled;
+    }
 }

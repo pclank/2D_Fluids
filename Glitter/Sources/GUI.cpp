@@ -9,6 +9,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     rand_force_dir = 0;
     force_scale = 0.5f;
     mix_bias = 0.5f;
+    cursor_enabled = true;
 }
 
 void GUI::Init()
@@ -43,7 +44,9 @@ void GUI::Render()
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
     ImGui::SliderFloat("Random Force Scale", &force_scale, 0.01f, 1.0f, "%.2f");
     ImGui::SliderFloat("Mix Bias", &mix_bias, 0.01f, 1.0f, "%.2f");
-    ImGui::Text("Use SPACEBAR to enable/disable cursor!");
+    ImGui::Text("Mouse cursor stuff:");
+    ImGui::Text("Cursor_x: %f", mouse_xpos);
+    ImGui::Text("Cursor_y: %f", mouse_ypos);
     ImGui::End();
 
     ImGui::Render();

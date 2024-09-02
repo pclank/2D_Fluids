@@ -54,11 +54,26 @@ public:
     /// <returns>: the bias</returns>
     float GetMixBias();
 
+    /// <summary>
+    /// Update mouse position in GUI
+    /// </summary>
+    /// <param name="xpos"></param>
+    /// <param name="ypos"></param>
+    inline void MousePositionUpdate(double xpos, double ypos)
+    {
+        mouse_xpos = xpos;
+        mouse_ypos = ypos;
+    }
+
 //private:
     /// <summary>
     /// The GUI callback is used to update our reference's state using the GUI_BUTTON enum
     /// </summary>
     //void GuiButtonCallback(GUI_BUTTON button);
+
+    double mouse_xpos;
+    double mouse_ypos;
+    bool cursor_enabled;
 
 private:
     GLFWwindow* p_window;
