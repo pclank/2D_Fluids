@@ -87,6 +87,7 @@ public:
     bool clicked;
     bool reset_pressed;
     bool dye_extreme_mode;
+    bool gui_enabled;
     ClickMode click_mode;
 
 private:

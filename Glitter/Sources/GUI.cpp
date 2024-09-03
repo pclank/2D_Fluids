@@ -15,6 +15,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     reset_pressed = false;
     click_mode = PRESSURE_MODE;
     dye_extreme_mode = false;
+    gui_enabled = true;
 }
 
 void GUI::Init()

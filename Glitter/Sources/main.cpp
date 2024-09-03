@@ -651,7 +651,8 @@ int main(int argc, char * argv[]) {
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Render GUI
-        gui.Render();
+        if (gui.gui_enabled)
+            gui.Render();
 
         // Reset input flags
         gui.ResetInputFlags();
@@ -740,5 +741,10 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
     else if (key == GLFW_KEY_M && action == GLFW_PRESS)
     {
         gui_pointer->click_mode = (gui_pointer->click_mode == PRESSURE_MODE) ? DYE_MODE : PRESSURE_MODE;
+    }
+    // Enable/Disable GUI
+    else if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+    {
+        gui_pointer->gui_enabled = !gui_pointer->gui_enabled;
     }
 }
