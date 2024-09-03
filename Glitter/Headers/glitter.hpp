@@ -13,8 +13,8 @@
 #include <Timer.hpp>
 
 // Define Some Constants
-const int mWidth = 1280;
-const int mHeight = 800;
+const int mWidth = 1024;
+const int mHeight = 1024;
 
 Timer main_timer;
 
@@ -44,15 +44,31 @@ cl::Kernel tex_randomize_kernel;
 cl::Kernel force_randomize_kernel;
 cl::Kernel mix_kernel;
 cl::Kernel tex_copy_kernel;
+cl::Kernel tex_neg_randomize_kernel;
+cl::Kernel neg_check_kernel;
+cl::Kernel click_effect_test_kernel;
+cl::Kernel image_reset_kernel;
+cl::Kernel click_effect_kernel;
+cl::Kernel add_dye_kernel;
+
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
+cl::NDRange single_thread(1);
+
+//float hardcoded_vertices[] = {
+//    // positions          // colors           // texture coords
+//     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+//     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+//    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+//    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+//};
 
 float hardcoded_vertices[] = {
     // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+     1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+     1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+    -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+    -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
 };
 
 unsigned int indices[] = {
@@ -67,6 +83,8 @@ unsigned int indices[] = {
 #define STD_TIMESTEP
 #define VORTICITY
 #define NEUMANN_BOUND
+//#define DISABLE_SIM
+#define RESET_TEXTURES
 #define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST
@@ -87,7 +105,13 @@ cl::make_kernel<float, cl::Image2D, cl::Image2D> boundarier(boundary_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> display_converter(display_convert_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D, cl::Image2D> mixer(mix_kernel);
 cl::make_kernel<cl::Image2D> tex_randomizer(tex_randomize_kernel);
+cl::make_kernel<cl::Image2D> tex_neg_randomizer(tex_neg_randomize_kernel);
+cl::make_kernel<cl::Image2D, cl::Image2D> neg_checker(neg_check_kernel);
 cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
+cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_kernel);
+cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
+cl::make_kernel<int, int, float, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
+cl::make_kernel<int, int, float, cl::Image2D> dye_adder(add_dye_kernel);
 
 // Images
 cl::Image2D target_texture;
@@ -97,6 +121,7 @@ cl::Image2D old_pressure;
 cl::Image2D new_pressure;
 cl::Image2D vorticity;
 cl::Image2D display_texture;
+cl::Image2D dye_texture;
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.

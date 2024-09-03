@@ -7,6 +7,10 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
+enum ClickMode {
+    PRESSURE_MODE, DYE_MODE
+};
+
 /// <summary>
 /// GUI wrapper that handles all imgui related calls
 /// </summary>
@@ -48,11 +52,41 @@ public:
     /// <returns>: the flag</returns>
     bool GetForceDirFlag();
 
+    /// <summary>
+    /// Returns the bias for the display texture mixing
+    /// </summary>
+    /// <returns>: the bias</returns>
+    float GetMixBias();
+
+    /// <summary>
+    /// Resets all input flags
+    /// </summary>
+    void ResetInputFlags();
+
+    /// <summary>
+    /// Update mouse position in GUI
+    /// </summary>
+    /// <param name="xpos"></param>
+    /// <param name="ypos"></param>
+    inline void MousePositionUpdate(double xpos, double ypos)
+    {
+        mouse_xpos = xpos;
+        mouse_ypos = ypos;
+    }
+
 //private:
     /// <summary>
     /// The GUI callback is used to update our reference's state using the GUI_BUTTON enum
     /// </summary>
     //void GuiButtonCallback(GUI_BUTTON button);
+
+    double mouse_xpos;
+    double mouse_ypos;
+    bool cursor_enabled;
+    bool clicking_enabled;
+    bool clicked;
+    bool reset_pressed;
+    ClickMode click_mode;
 
 private:
     GLFWwindow* p_window;
@@ -60,4 +94,5 @@ private:
     bool rand_force;
     bool rand_force_dir;
     float force_scale;
+    float mix_bias;
 };

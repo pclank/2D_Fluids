@@ -16,6 +16,13 @@
 #include <direct.h>
 #include <wingdi.h>
 
+GUI* gui_pointer;
+
+// Callbacks
+void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
 int main(int argc, char * argv[]) {
 
     // Load GLFW and Create a Window
@@ -41,6 +48,12 @@ int main(int argc, char * argv[]) {
     // Initialize our GUI
     GUI gui = GUI(mWindow, main_timer);
     gui.Init();
+    gui_pointer = &gui;
+
+    // OpenGL Callback Functions
+    glfwSetCursorPosCallback(mWindow, CursorPositionCallback);
+    glfwSetMouseButtonCallback(mWindow, MouseButtonCallback);
+    glfwSetKeyCallback(mWindow, KeyboardCallback);
 
     // OpenCL initialization
     std::vector<cl::Platform> all_platforms;
@@ -207,6 +220,17 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL dye texture
+    unsigned int gl_dye;
+    glGenTextures(1, &gl_dye);
+    glBindTexture(GL_TEXTURE_2D, gl_dye);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     // OpenGL display texture
     unsigned int gl_display;
     glGenTextures(1, &gl_display);
@@ -221,46 +245,38 @@ int main(int argc, char * argv[]) {
 #ifdef LOAD_TEXTURE
     int width, height, nrChannels;
     //unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/container.jpg", &width, &height, &nrChannels, 0);
-    unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/wall.jpg", &width, &height, &nrChannels, 0);
+    //unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/wall.jpg", &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/bricks1K.png", &width, &height, &nrChannels, 0);
     if (data)
     {
-        glBindTexture(GL_TEXTURE_2D, gl_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_display);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+        // Pick correct channels
+        int src_channels = GL_RGB;
+        if (nrChannels == 4)
+            src_channels = GL_RGBA;
 
-        /*glBindTexture(GL_TEXTURE_2D, gl_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        std::cout << "Texture width: " << width << " Texture height: " << height << " Texture channels: " << nrChannels << std::endl;
+
+        glBindTexture(GL_TEXTURE_2D, gl_texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_dye);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_display);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);*/
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
     }
     else
     {
@@ -291,8 +307,17 @@ int main(int argc, char * argv[]) {
     vorticity = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_vorticity, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
+    dye_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_dye, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
     display_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_display, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
+    cl_image_format form;
+    clGetImageInfo(display_texture(), CL_IMAGE_FORMAT, sizeof(cl_image_format), &form, NULL);
+    std::cout << form.image_channel_data_type << std::endl;
+    /*CL_UNORM_INT8
+    CL_FLOAT*/
 
     // Flush GL queue
     glFinish();
@@ -308,6 +333,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
@@ -349,6 +376,19 @@ int main(int argc, char * argv[]) {
     display_converter = cl::Kernel(program, "DisplayConvert");
     mixer = cl::Kernel(program, "Mix");
     force_randomizer = cl::Kernel(program, "RandomForce");
+    tex_neg_randomizer = cl::Kernel(program, "RandomizeNegativeTexture");
+    neg_checker = cl::Kernel(program, "CheckNegativeValues");
+    click_effect_tester = cl::Kernel(program, "ClickEffectTest");
+    image_resetter = cl::Kernel(program, "ResetImage");
+    click_effecter = cl::Kernel(program, "ClickAddPressure");
+    dye_adder = cl::Kernel(program, "AddDye");
+
+#ifdef RESET_TEXTURES
+    image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+#endif // RESET_TEXTURES
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -360,6 +400,8 @@ int main(int argc, char * argv[]) {
     glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_dye);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_display);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -389,6 +431,8 @@ int main(int argc, char * argv[]) {
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
 
@@ -398,7 +442,7 @@ int main(int argc, char * argv[]) {
 
     // Initialize Timer
     main_timer.Init();
-    
+
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
     {
@@ -428,7 +472,17 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
+
+        // Reset simulation
+        if (gui.reset_pressed)
+        {
+            image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+            gui.reset_pressed = false;
+        }
 
         // Random force
         if (gui.IsForceEnabled())
@@ -439,8 +493,28 @@ int main(int argc, char * argv[]) {
             //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
         }
 
+        // Click adder
+        if (gui.clicked && gui.clicking_enabled)
+        {
+            // Pressure adder
+            if (gui.click_mode == PRESSURE_MODE)
+                click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
+            // Dye adder
+            else
+                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), dye_texture).wait();
+        }
+
+#ifndef DISABLE_SIM
         advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
 
         // Run kernels
         for (int i = 0; i < JACOBI_REPS; i++)
@@ -451,6 +525,14 @@ int main(int argc, char * argv[]) {
 
         divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
 
         gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_pressure, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
@@ -473,11 +555,20 @@ int main(int argc, char * argv[]) {
         vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_vel, vorticity).wait();
         vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / 1, main_timer.GetDeltaTime(), 1.0f, 1.0f, vorticity, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
 #endif // VORTICITY
 
         // Display stuff
-        //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
-        display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+        mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
+        //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+#endif // DISABLE_SIM
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
@@ -485,6 +576,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Flush CL queue
@@ -506,6 +598,9 @@ int main(int argc, char * argv[]) {
         // Render GUI
         gui.Render();
 
+        // Reset input flags
+        gui.ResetInputFlags();
+
         // Flip Buffers and Draw
         glfwSwapBuffers(mWindow);
         glfwPollEvents();
@@ -522,4 +617,73 @@ int main(int argc, char * argv[]) {
     glfwTerminate();
 
     return EXIT_SUCCESS;
+}
+
+/// <summary>
+/// Callback function for mouse cursor movement
+/// </summary>
+/// <param name="window"></param>
+/// <param name="xpos"></param>
+/// <param name="ypos"></param>
+void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
+{
+    gui_pointer->MousePositionUpdate(xpos, ypos);
+
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+
+/// <summary>
+/// Callback function for mouse button press
+/// </summary>
+/// <param name="window"></param>
+/// <param name="button"></param>
+/// <param name="action"></param>
+/// <param name="mods"></param>
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        std::cout << "MOUSE CLICK on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
+        // TODO: Add functionality!
+        gui_pointer->clicked = true;
+    }
+
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+}
+
+/// <summary>
+/// Callback Function for keyboard button press
+/// </summary>
+/// <param name="window"></param>
+/// <param name="key"></param>
+/// <param name="scancode"></param>
+/// <param name="action"></param>
+/// <param name="mods"></param>
+void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    // Enable/Disable Cursor
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    {
+        if (gui_pointer->cursor_enabled)
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        else
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+
+        gui_pointer->cursor_enabled = !gui_pointer->cursor_enabled;
+    }
+    // Enable/Disable Viewport clicking
+    else if (key == GLFW_KEY_G && action == GLFW_PRESS)
+    {
+        gui_pointer->clicking_enabled = !gui_pointer->clicking_enabled;
+    }
+    // Reset simulation
+    else if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    {
+        gui_pointer->reset_pressed = true;
+    }
+    // Switch click mode
+    else if (key == GLFW_KEY_M && action == GLFW_PRESS)
+    {
+        gui_pointer->click_mode = (gui_pointer->click_mode == PRESSURE_MODE) ? DYE_MODE : PRESSURE_MODE;
+    }
 }

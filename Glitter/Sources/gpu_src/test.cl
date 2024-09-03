@@ -79,6 +79,7 @@ kernel void tex_test(write_only image2d_t tgt_tex)
 }
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
+//__constant sampler_t sampler = CLK_FILTER_NEAREST;
 
 kernel void tex_read_test(read_only image2d_t tgt_tex, __global float* debug_buf)
 {
@@ -263,7 +264,7 @@ kernel void Boundary(float scale, read_only image2d_t u, write_only image2d_t uN
 	else if (coords.y == get_image_width(u) - 1)
 		bv.y = 0.0f;
 
-	//bv = scale * read_imagef(u, sampler, coords);
+	bv = scale * read_imagef(u, sampler, coords);
 
 	write_imagef(uNew, coords, bv);
 }
@@ -299,7 +300,8 @@ kernel void NeumannBoundary(float scale, read_only image2d_t u, write_only image
 		offset = (int2)(0, 1);
 	}
 
-	float4 bv = scale * read_imagef(u, sampler, coords + offset);
+	//float4 bv = scale * read_imagef(u, sampler, coords + offset);
+	float4 bv = (float4)(0.0f);
 
 	write_imagef(uNew, coords, bv);
 }
@@ -328,7 +330,7 @@ kernel void Mix(float bias, read_only image2d_t t1, read_only image2d_t t2, writ
 	float4 t1_val = read_imagef(t1, sampler, coords);
 	float4 t2_val = read_imagef(t2, sampler, coords);
 
-	write_imagef(t3, coords, bias * t1_val - t2_val);
+	write_imagef(t3, coords, bias * t1_val - (1.0f - bias) * t2_val);
 }
 
 kernel void RandomizeTexture(write_only image2d_t tgt)
@@ -340,6 +342,36 @@ kernel void RandomizeTexture(write_only image2d_t tgt)
 	uint seed = x + y * get_image_width(tgt);
 	float4 tgt_val = (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
 
+	write_imagef(tgt, coords, tgt_val);
+}
+
+kernel void RandomizeNegativeTexture(write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	uint seed = x + y * get_image_width(tgt);
+
+	float4 tgt_val = (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+
+	if (AdvancedRandomFloat(seed) < 0.5f)
+		tgt_val = -tgt_val;
+
+	tgt_val.z = 1.0f;
+
+	write_imagef(tgt, coords, tgt_val);
+}
+
+kernel void CheckNegativeValues(read_only image2d_t src, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 val = read_imagef(src, sampler, coords);
+
+	float4 tgt_val = (val.x < 0.0f) ? (float4)(1.0f, 0.0f, 0.0f, 1.0f) : (float4)(0.0f, 1.0f, 0.0f, 1.0f);
 	write_imagef(tgt, coords, tgt_val);
 }
 
@@ -374,4 +406,69 @@ kernel void RandomForce(float scale, int dir_flag, read_only image2d_t src, writ
 	}
 
 	write_imagef(tgt, coords, tgt_val);
+}
+
+kernel void ResetImage(write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	write_imagef(tgt, coords, (float4)(0.0f));
+}
+
+kernel void ClickEffectTest(int xpos, int ypos, write_only image2d_t tgt)
+{
+	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
+
+	write_imagef(tgt, coords, (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(0, 1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(1, 1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(-1, 0), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(0, -1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+}
+
+kernel void ClickAddPressure(int xpos, int ypos, float scale, read_only image2d_t src, write_only image2d_t tgt)
+{
+	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
+
+	uint seed = coords.x + coords.y * get_image_width(tgt);
+
+	float4 src_val = read_imagef(src, sampler, coords);
+	float random_val = AdvancedRandomFloat(seed);
+	float4 tgt_val = src_val + scale * (float4)(random_val, random_val, random_val, 1.0f);
+
+	write_imagef(tgt, coords, tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+}
+
+kernel void AddDye(int xpos, int ypos, float scale, write_only image2d_t tgt)
+{
+	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
+
+	uint seed = coords.x + coords.y * get_image_width(tgt);
+
+	float random_val = AdvancedRandomFloat(seed);
+	float4 tgt_val = scale * (float4)(random_val, random_val, random_val, 1.0f);
+
+	write_imagef(tgt, coords, tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
 }

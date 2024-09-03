@@ -8,6 +8,12 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     rand_force = false;
     rand_force_dir = 0;
     force_scale = 0.5f;
+    mix_bias = 0.5f;
+    cursor_enabled = true;
+    clicking_enabled = false;
+    clicked = false;
+    reset_pressed = false;
+    click_mode = PRESSURE_MODE;
 }
 
 void GUI::Init()
@@ -31,6 +37,8 @@ void GUI::Init()
 
 void GUI::Render()
 {
+    const char* click_mode_string = (click_mode == PRESSURE_MODE) ? "Set to pressure mode" : "Set to dye mode";
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -38,10 +46,15 @@ void GUI::Render()
     ImGui::Begin("Control Window");
     ImGui::Text("DeltaTime: %f", m_timer.GetDeltaTime());
     ImGui::Text("FPS: %.2f", m_timer.GetFPS());
+    ImGui::Checkbox("Enable/Disable clicking with \'G\'", &clicking_enabled);
+    ImGui::Text(click_mode_string);
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
-    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.01f, 1.0f, "%.2f");
-    ImGui::Text("Use SPACEBAR to enable/disable cursor!");
+    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 10.0f, "%.1f");
+    ImGui::SliderFloat("Mix Bias", &mix_bias, 0.0f, 1.0f, "%.2f");
+    ImGui::Text("Mouse cursor stuff:");
+    ImGui::Text("Cursor_x: %f", mouse_xpos);
+    ImGui::Text("Cursor_y: %f", mouse_ypos);
     ImGui::End();
 
     ImGui::Render();
@@ -68,6 +81,17 @@ float GUI::GetForceScale()
 bool GUI::GetForceDirFlag()
 {
     return rand_force_dir;
+}
+
+float GUI::GetMixBias()
+{
+    return mix_bias;
+}
+
+void GUI::ResetInputFlags()
+{
+    // TODO: Add all!
+    clicked = false;
 }
 
 //void GUI::GuiButtonCallback(GUI_BUTTON button)
