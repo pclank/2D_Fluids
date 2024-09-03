@@ -231,6 +231,17 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL dye texture new
+    unsigned int gl_dye_new;
+    glGenTextures(1, &gl_dye_new);
+    glBindTexture(GL_TEXTURE_2D, gl_dye_new);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     // OpenGL display texture
     unsigned int gl_display;
     glGenTextures(1, &gl_display);
@@ -274,6 +285,9 @@ int main(int argc, char * argv[]) {
         glBindTexture(GL_TEXTURE_2D, gl_dye);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_dye_new);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_display);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -310,6 +324,9 @@ int main(int argc, char * argv[]) {
     dye_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_dye, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
+    dye_texture_new = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_dye_new, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
     display_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_display, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
@@ -335,6 +352,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
@@ -388,6 +407,7 @@ int main(int argc, char * argv[]) {
     image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture_new).wait();
 #endif // RESET_TEXTURES
 
     // We have to generate the mipmaps again!!!
@@ -402,6 +422,8 @@ int main(int argc, char * argv[]) {
     glBindTexture(GL_TEXTURE_2D, gl_vorticity);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_dye);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_dye_new);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_display);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -432,6 +454,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
@@ -473,6 +497,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Reset simulation
@@ -481,6 +506,8 @@ int main(int argc, char * argv[]) {
             image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
             image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
             image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture_new).wait();
             gui.reset_pressed = false;
         }
 
@@ -501,7 +528,7 @@ int main(int argc, char * argv[]) {
                 click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
             // Dye adder
             else
-                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), dye_texture).wait();
+                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), gui.dye_extreme_mode, dye_texture).wait();
         }
 
 #ifndef DISABLE_SIM
@@ -565,6 +592,32 @@ int main(int argc, char * argv[]) {
 #endif // NEUMANN_BOUND
 #endif // VORTICITY
 
+        // Dye Simulation
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
+
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+            jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, dye_texture, target_texture, dye_texture_new).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        }
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
+
         // Display stuff
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
         //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
@@ -577,6 +630,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Flush CL queue
@@ -587,7 +641,8 @@ int main(int argc, char * argv[]) {
         //glBindTexture(GL_TEXTURE_2D, gl_texture_new);
         //glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glBindTexture(GL_TEXTURE_2D, gl_display);
+        //glBindTexture(GL_TEXTURE_2D, gl_display);
+        glBindTexture(GL_TEXTURE_2D, gl_dye);
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container

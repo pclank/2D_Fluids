@@ -80,7 +80,7 @@ unsigned int indices[] = {
 #define TEXTURE_TEST
 #define LOAD_TEXTURE
 //#define RAND_TEX
-#define STD_TIMESTEP
+//#define STD_TIMESTEP
 #define VORTICITY
 #define NEUMANN_BOUND
 //#define DISABLE_SIM
@@ -111,7 +111,7 @@ cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_ran
 cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_kernel);
 cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
 cl::make_kernel<int, int, float, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
-cl::make_kernel<int, int, float, cl::Image2D> dye_adder(add_dye_kernel);
+cl::make_kernel<int, int, float, int, cl::Image2D> dye_adder(add_dye_kernel);
 
 // Images
 cl::Image2D target_texture;
@@ -122,6 +122,7 @@ cl::Image2D new_pressure;
 cl::Image2D vorticity;
 cl::Image2D display_texture;
 cl::Image2D dye_texture;
+cl::Image2D dye_texture_new;
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.

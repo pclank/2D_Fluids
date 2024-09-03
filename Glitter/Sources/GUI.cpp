@@ -14,6 +14,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     clicked = false;
     reset_pressed = false;
     click_mode = PRESSURE_MODE;
+    dye_extreme_mode = false;
 }
 
 void GUI::Init()
@@ -51,7 +52,8 @@ void GUI::Render()
     ImGui::TextColored(ImVec4(0.4f, 0.0f, 1.0f, 1.0f), click_mode_string);
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
-    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 10.0f, "%.1f");
+    ImGui::Checkbox("Dye extreme mode", &dye_extreme_mode);
+    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 50.0f, "%.1f");
     ImGui::Separator();
     ImGui::SliderFloat("Mix Bias", &mix_bias, 0.0f, 1.0f, "%.2f");
     ImGui::Text("Mouse cursor stuff:");
