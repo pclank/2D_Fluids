@@ -13,6 +13,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     clicking_enabled = false;
     clicked = false;
     reset_pressed = false;
+    click_mode = PRESSURE_MODE;
 }
 
 void GUI::Init()
@@ -36,6 +37,8 @@ void GUI::Init()
 
 void GUI::Render()
 {
+    const char* click_mode_string = (click_mode == PRESSURE_MODE) ? "Set to pressure mode" : "Set to dye mode";
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -44,6 +47,7 @@ void GUI::Render()
     ImGui::Text("DeltaTime: %f", m_timer.GetDeltaTime());
     ImGui::Text("FPS: %.2f", m_timer.GetFPS());
     ImGui::Checkbox("Enable/Disable clicking with \'G\'", &clicking_enabled);
+    ImGui::Text(click_mode_string);
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
     ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 10.0f, "%.1f");

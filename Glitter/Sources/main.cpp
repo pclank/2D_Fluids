@@ -220,6 +220,17 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL dye texture
+    unsigned int gl_dye;
+    glGenTextures(1, &gl_dye);
+    glBindTexture(GL_TEXTURE_2D, gl_dye);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     // OpenGL display texture
     unsigned int gl_display;
     glGenTextures(1, &gl_display);
@@ -260,6 +271,9 @@ int main(int argc, char * argv[]) {
         glBindTexture(GL_TEXTURE_2D, gl_vorticity);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_dye);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_display);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -293,6 +307,9 @@ int main(int argc, char * argv[]) {
     vorticity = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_vorticity, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
+    dye_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_dye, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
     display_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_display, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
@@ -316,6 +333,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
@@ -362,11 +381,13 @@ int main(int argc, char * argv[]) {
     click_effect_tester = cl::Kernel(program, "ClickEffectTest");
     image_resetter = cl::Kernel(program, "ResetImage");
     click_effecter = cl::Kernel(program, "ClickAddPressure");
+    dye_adder = cl::Kernel(program, "AddDye");
 
 #ifdef RESET_TEXTURES
     image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
 #endif // RESET_TEXTURES
 
     // We have to generate the mipmaps again!!!
@@ -379,6 +400,8 @@ int main(int argc, char * argv[]) {
     glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_vorticity);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_dye);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_display);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -407,6 +430,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
@@ -447,6 +472,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Reset simulation
@@ -470,8 +496,12 @@ int main(int argc, char * argv[]) {
         // Click adder
         if (gui.clicked && gui.clicking_enabled)
         {
-            //click_effect_tester(cl::EnqueueArgs(queue, global_test), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), display_texture).wait();
-            click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
+            // Pressure adder
+            if (gui.click_mode == PRESSURE_MODE)
+                click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
+            // Dye adder
+            else
+                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), dye_texture).wait();
         }
 
 #ifndef DISABLE_SIM
@@ -546,6 +576,7 @@ int main(int argc, char * argv[]) {
         err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Flush CL queue
@@ -649,5 +680,10 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
     else if (key == GLFW_KEY_R && action == GLFW_PRESS)
     {
         gui_pointer->reset_pressed = true;
+    }
+    // Switch click mode
+    else if (key == GLFW_KEY_M && action == GLFW_PRESS)
+    {
+        gui_pointer->click_mode = (gui_pointer->click_mode == PRESSURE_MODE) ? DYE_MODE : PRESSURE_MODE;
     }
 }

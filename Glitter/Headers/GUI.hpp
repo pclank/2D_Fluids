@@ -7,6 +7,10 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
+enum ClickMode {
+    PRESSURE_MODE, DYE_MODE
+};
+
 /// <summary>
 /// GUI wrapper that handles all imgui related calls
 /// </summary>
@@ -82,6 +86,7 @@ public:
     bool clicking_enabled;
     bool clicked;
     bool reset_pressed;
+    ClickMode click_mode;
 
 private:
     GLFWwindow* p_window;
