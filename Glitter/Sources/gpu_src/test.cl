@@ -418,7 +418,7 @@ kernel void ResetImage(write_only image2d_t tgt)
 
 kernel void ClickEffectTest(int xpos, int ypos, write_only image2d_t tgt)
 {
-	 int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
+	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
 
 	write_imagef(tgt, coords, (float4)(1.0f, 0.0f, 0.0f, 1.0f));
 	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
@@ -429,4 +429,25 @@ kernel void ClickEffectTest(int xpos, int ypos, write_only image2d_t tgt)
 	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
 	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+}
+
+kernel void ClickAddPressure(int xpos, int ypos, float scale, read_only image2d_t src, write_only image2d_t tgt)
+{
+	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
+
+	uint seed = coords.x + coords.y * get_image_width(tgt);
+
+	float4 src_val = read_imagef(src, sampler, coords);
+	float random_val = AdvancedRandomFloat(seed);
+	float4 tgt_val = src_val + scale * (float4)(random_val, random_val, random_val, 1.0f);
+
+	write_imagef(tgt, coords, tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
 }

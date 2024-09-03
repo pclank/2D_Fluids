@@ -48,9 +48,11 @@ cl::Kernel tex_neg_randomize_kernel;
 cl::Kernel neg_check_kernel;
 cl::Kernel click_effect_test_kernel;
 cl::Kernel image_reset_kernel;
+cl::Kernel click_effect_kernel;
 
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
+cl::NDRange single_thread(1);
 
 //float hardcoded_vertices[] = {
 //    // positions          // colors           // texture coords
@@ -80,6 +82,8 @@ unsigned int indices[] = {
 #define STD_TIMESTEP
 #define VORTICITY
 #define NEUMANN_BOUND
+//#define DISABLE_SIM
+#define RESET_TEXTURES
 #define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST
@@ -105,6 +109,7 @@ cl::make_kernel<cl::Image2D, cl::Image2D> neg_checker(neg_check_kernel);
 cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
 cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_kernel);
 cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
+cl::make_kernel<int, int, float, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
 
 // Images
 cl::Image2D target_texture;

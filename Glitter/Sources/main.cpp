@@ -361,8 +361,13 @@ int main(int argc, char * argv[]) {
     neg_checker = cl::Kernel(program, "CheckNegativeValues");
     click_effect_tester = cl::Kernel(program, "ClickEffectTest");
     image_resetter = cl::Kernel(program, "ResetImage");
+    click_effecter = cl::Kernel(program, "ClickAddPressure");
 
-    image_resetter(cl::EnqueueArgs(queue, global_test), display_texture).wait();
+#ifdef RESET_TEXTURES
+    image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+#endif // RESET_TEXTURES
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -453,7 +458,14 @@ int main(int argc, char * argv[]) {
             //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
         }
 
-#ifdef DEBUG
+        // Click adder
+        if (gui.clicked)
+        {
+            //click_effect_tester(cl::EnqueueArgs(queue, global_test), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), display_texture).wait();
+            click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
+        }
+
+#ifndef DISABLE_SIM
         advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
@@ -494,17 +506,11 @@ int main(int argc, char * argv[]) {
         //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
         //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
-#endif // DEBUG
+#endif // DISABLE_SIM
 
         // Negative checks
         //tex_neg_randomizer(cl::EnqueueArgs(queue, global_test), new_vel).wait();
         //neg_checker(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
-
-        // Click tester
-        if (gui.clicked)
-        {
-            click_effect_tester(cl::EnqueueArgs(queue, global_test), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), display_texture).wait();
-        }
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
