@@ -478,6 +478,14 @@ int main(int argc, char * argv[]) {
         advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
         // Run kernels
         for (int i = 0; i < JACOBI_REPS; i++)
         {
@@ -487,6 +495,14 @@ int main(int argc, char * argv[]) {
 
         divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
 
         gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_pressure, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
@@ -509,17 +525,20 @@ int main(int argc, char * argv[]) {
         vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_vel, vorticity).wait();
         vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / 1, main_timer.GetDeltaTime(), 1.0f, 1.0f, vorticity, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
 #endif // VORTICITY
 
         // Display stuff
-        //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
         //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
 #endif // DISABLE_SIM
-
-        // Negative checks
-        //tex_neg_randomizer(cl::EnqueueArgs(queue, global_test), new_vel).wait();
-        //neg_checker(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
