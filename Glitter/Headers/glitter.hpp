@@ -13,8 +13,8 @@
 #include <Timer.hpp>
 
 // Define Some Constants
-const int mWidth = 1280;
-const int mHeight = 800;
+const int mWidth = 1024;
+const int mHeight = 1024;
 
 Timer main_timer;
 
@@ -46,15 +46,26 @@ cl::Kernel mix_kernel;
 cl::Kernel tex_copy_kernel;
 cl::Kernel tex_neg_randomize_kernel;
 cl::Kernel neg_check_kernel;
+cl::Kernel click_effect_test_kernel;
+cl::Kernel image_reset_kernel;
+
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
 
+//float hardcoded_vertices[] = {
+//    // positions          // colors           // texture coords
+//     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+//     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+//    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+//    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+//};
+
 float hardcoded_vertices[] = {
     // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+     1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+     1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+    -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+    -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
 };
 
 unsigned int indices[] = {
@@ -92,6 +103,8 @@ cl::make_kernel<cl::Image2D> tex_randomizer(tex_randomize_kernel);
 cl::make_kernel<cl::Image2D> tex_neg_randomizer(tex_neg_randomize_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> neg_checker(neg_check_kernel);
 cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
+cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_kernel);
+cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
 
 // Images
 cl::Image2D target_texture;

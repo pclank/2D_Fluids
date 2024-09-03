@@ -234,46 +234,35 @@ int main(int argc, char * argv[]) {
 #ifdef LOAD_TEXTURE
     int width, height, nrChannels;
     //unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/container.jpg", &width, &height, &nrChannels, 0);
-    unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/wall.jpg", &width, &height, &nrChannels, 0);
+    //unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/wall.jpg", &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load("C:/Repos/2D_Fluids/textures/bricks1K.png", &width, &height, &nrChannels, 0);
     if (data)
     {
-        glBindTexture(GL_TEXTURE_2D, gl_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, gl_display);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+        // Pick correct channels
+        int src_channels = GL_RGB;
+        if (nrChannels == 4)
+            src_channels = GL_RGBA;
 
-        /*glBindTexture(GL_TEXTURE_2D, gl_texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        std::cout << "Texture width: " << width << " Texture height: " << height << " Texture channels: " << nrChannels << std::endl;
+
+        glBindTexture(GL_TEXTURE_2D, gl_texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_texture_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_new);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_display);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);*/
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
     }
     else
     {
@@ -370,6 +359,10 @@ int main(int argc, char * argv[]) {
     force_randomizer = cl::Kernel(program, "RandomForce");
     tex_neg_randomizer = cl::Kernel(program, "RandomizeNegativeTexture");
     neg_checker = cl::Kernel(program, "CheckNegativeValues");
+    click_effect_tester = cl::Kernel(program, "ClickEffectTest");
+    image_resetter = cl::Kernel(program, "ResetImage");
+
+    image_resetter(cl::EnqueueArgs(queue, global_test), display_texture).wait();
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -419,7 +412,7 @@ int main(int argc, char * argv[]) {
 
     // Initialize Timer
     main_timer.Init();
-    
+
     // Rendering Loop
     while (glfwWindowShouldClose(mWindow) == false)
     {
@@ -460,6 +453,7 @@ int main(int argc, char * argv[]) {
             //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
         }
 
+#ifdef DEBUG
         advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
@@ -500,10 +494,17 @@ int main(int argc, char * argv[]) {
         //mixer(cl::EnqueueArgs(queue, global_test), 0.6f, new_vel, new_pressure, display_texture).wait();
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
         //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+#endif // DEBUG
 
         // Negative checks
         //tex_neg_randomizer(cl::EnqueueArgs(queue, global_test), new_vel).wait();
         //neg_checker(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+
+        // Click tester
+        if (gui.clicked)
+        {
+            click_effect_tester(cl::EnqueueArgs(queue, global_test), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), display_texture).wait();
+        }
 
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
@@ -531,6 +532,9 @@ int main(int argc, char * argv[]) {
 
         // Render GUI
         gui.Render();
+
+        // Reset input flags
+        gui.ResetInputFlags();
 
         // Flip Buffers and Draw
         glfwSwapBuffers(mWindow);
@@ -576,7 +580,10 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
         std::cout << "MOUSE CLICK on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
         // TODO: Add functionality!
+        gui_pointer->clicked = true;
     }
+
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 /// <summary>

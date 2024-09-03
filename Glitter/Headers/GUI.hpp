@@ -55,6 +55,11 @@ public:
     float GetMixBias();
 
     /// <summary>
+    /// Resets all input flags
+    /// </summary>
+    void ResetInputFlags();
+
+    /// <summary>
     /// Update mouse position in GUI
     /// </summary>
     /// <param name="xpos"></param>
@@ -74,6 +79,7 @@ public:
     double mouse_xpos;
     double mouse_ypos;
     bool cursor_enabled;
+    bool clicked;
 
 private:
     GLFWwindow* p_window;

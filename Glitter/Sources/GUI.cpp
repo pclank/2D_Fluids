@@ -10,6 +10,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     force_scale = 0.5f;
     mix_bias = 0.5f;
     cursor_enabled = true;
+    clicked = false;
 }
 
 void GUI::Init()
@@ -78,6 +79,12 @@ bool GUI::GetForceDirFlag()
 float GUI::GetMixBias()
 {
     return mix_bias;
+}
+
+void GUI::ResetInputFlags()
+{
+    // TODO: Add all!
+    clicked = false;
 }
 
 //void GUI::GuiButtonCallback(GUI_BUTTON button)
