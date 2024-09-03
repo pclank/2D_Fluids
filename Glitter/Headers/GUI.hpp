@@ -11,6 +11,10 @@ enum ClickMode {
     PRESSURE_MODE, DYE_MODE
 };
 
+enum RenderedTexture {
+    VELOCITY, PRESSURE, DYE
+};
+
 /// <summary>
 /// GUI wrapper that handles all imgui related calls
 /// </summary>
@@ -88,7 +92,9 @@ public:
     bool reset_pressed;
     bool dye_extreme_mode;
     bool gui_enabled;
+    int selected_index;
     ClickMode click_mode;
+    RenderedTexture rendered_texture;
 
 private:
     GLFWwindow* p_window;

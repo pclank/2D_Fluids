@@ -1,4 +1,5 @@
 #include "GUI.hpp"
+#include <vector>
 
 GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     :
@@ -16,6 +17,8 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     click_mode = PRESSURE_MODE;
     dye_extreme_mode = false;
     gui_enabled = true;
+    rendered_texture = DYE;
+    selected_index = 2;
 }
 
 void GUI::Init()
@@ -40,6 +43,7 @@ void GUI::Init()
 void GUI::Render()
 {
     const char* click_mode_string = (click_mode == PRESSURE_MODE) ? "Set to pressure mode" : "Set to dye mode";
+    const std::vector<const char*> selectables{ "VELOCITY", "PRESSURE", "DYE" };
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -56,6 +60,21 @@ void GUI::Render()
     ImGui::Checkbox("Dye extreme mode", &dye_extreme_mode);
     ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 50.0f, "%.1f");
     ImGui::Separator();
+    if (ImGui::BeginCombo("texture", selectables[selected_index]))
+    {
+        for (int i = 0; i < selectables.size(); ++i) {
+            const bool isSelected = (selected_index == i);
+            if (ImGui::Selectable(selectables[i], isSelected))
+                selected_index = i;
+
+            // Set the initial focus when opening the combo
+            // (scrolling + keyboard navigation focus)
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
     ImGui::SliderFloat("Mix Bias", &mix_bias, 0.0f, 1.0f, "%.2f");
     ImGui::Text("Mouse cursor stuff:");
     ImGui::Text("Cursor_x: %f", mouse_xpos);

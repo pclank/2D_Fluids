@@ -16,7 +16,9 @@
 #include <direct.h>
 #include <wingdi.h>
 
+// Some Globals
 GUI* gui_pointer;
+const std::vector<RenderedTexture> selectables{ VELOCITY, PRESSURE, DYE };
 
 // Callbacks
 void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
@@ -532,7 +534,8 @@ int main(int argc, char * argv[]) {
         }
 
 #ifndef DISABLE_SIM
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
+        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 0.999f, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
 #ifdef NEUMANN_BOUND
@@ -546,8 +549,11 @@ int main(int argc, char * argv[]) {
         // Run kernels
         for (int i = 0; i < JACOBI_REPS; i++)
         {
-            jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, target_texture, new_pressure).wait();
+            //jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, target_texture, new_pressure).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, old_pressure, new_pressure).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, target_texture, target_texture, new_vel).wait();
             tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         }
 
         divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, target_texture, new_vel).wait();
@@ -593,7 +599,8 @@ int main(int argc, char * argv[]) {
 #endif // VORTICITY
 
         // Dye Simulation
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, dye_texture, dye_texture_new).wait();
+        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, dye_texture, dye_texture_new).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 0.992f, target_texture, dye_texture, dye_texture_new).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
 
 #ifdef NEUMANN_BOUND
@@ -642,7 +649,14 @@ int main(int argc, char * argv[]) {
         //glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
         //glBindTexture(GL_TEXTURE_2D, gl_display);
-        glBindTexture(GL_TEXTURE_2D, gl_dye);
+
+        if (selectables[gui.selected_index] == DYE)
+            glBindTexture(GL_TEXTURE_2D, gl_dye);
+        else if (selectables[gui.selected_index] == VELOCITY)
+            glBindTexture(GL_TEXTURE_2D, gl_texture);
+        else if (selectables[gui.selected_index] == PRESSURE)
+            glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container
