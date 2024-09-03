@@ -264,7 +264,7 @@ kernel void Boundary(float scale, read_only image2d_t u, write_only image2d_t uN
 	else if (coords.y == get_image_width(u) - 1)
 		bv.y = 0.0f;
 
-	//bv = scale * read_imagef(u, sampler, coords);
+	bv = scale * read_imagef(u, sampler, coords);
 
 	write_imagef(uNew, coords, bv);
 }
@@ -300,7 +300,8 @@ kernel void NeumannBoundary(float scale, read_only image2d_t u, write_only image
 		offset = (int2)(0, 1);
 	}
 
-	float4 bv = scale * read_imagef(u, sampler, coords + offset);
+	//float4 bv = scale * read_imagef(u, sampler, coords + offset);
+	float4 bv = (float4)(0.0f);
 
 	write_imagef(uNew, coords, bv);
 }

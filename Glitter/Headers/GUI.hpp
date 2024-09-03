@@ -79,7 +79,9 @@ public:
     double mouse_xpos;
     double mouse_ypos;
     bool cursor_enabled;
+    bool clicking_enabled;
     bool clicked;
+    bool reset_pressed;
 
 private:
     GLFWwindow* p_window;

@@ -449,6 +449,15 @@ int main(int argc, char * argv[]) {
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
+        // Reset simulation
+        if (gui.reset_pressed)
+        {
+            image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+            gui.reset_pressed = false;
+        }
+
         // Random force
         if (gui.IsForceEnabled())
         {
@@ -459,7 +468,7 @@ int main(int argc, char * argv[]) {
         }
 
         // Click adder
-        if (gui.clicked)
+        if (gui.clicked && gui.clicking_enabled)
         {
             //click_effect_tester(cl::EnqueueArgs(queue, global_test), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), display_texture).wait();
             click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
@@ -611,5 +620,15 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
 
         gui_pointer->cursor_enabled = !gui_pointer->cursor_enabled;
+    }
+    // Enable/Disable Viewport clicking
+    else if (key == GLFW_KEY_G && action == GLFW_PRESS)
+    {
+        gui_pointer->clicking_enabled = !gui_pointer->clicking_enabled;
+    }
+    // Reset simulation
+    else if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    {
+        gui_pointer->reset_pressed = true;
     }
 }
