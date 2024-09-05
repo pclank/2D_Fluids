@@ -545,42 +545,6 @@ int main(int argc, char * argv[]) {
 
 #ifndef DISABLE_SIM
         // ****************************************************************************************
-        // Bound Velocity
-        // ****************************************************************************************
-#ifdef NEUMANN_BOUND
-        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-#else
-        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-#endif // NEUMANN_BOUND
-
-        // ****************************************************************************************
-        // Advect Velocity
-        // ****************************************************************************************
-        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-
-        // ****************************************************************************************
-        // Bound Dye
-        // ****************************************************************************************
-#ifdef NEUMANN_BOUND
-        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-#else
-        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-#endif // NEUMANN_BOUND
-
-        // ****************************************************************************************
-        // Advect Dye
-        // ****************************************************************************************
-        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 2.0f, target_texture, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-
-        // ****************************************************************************************
         // Add Dye or Force
         // ****************************************************************************************
 
@@ -609,11 +573,8 @@ int main(int argc, char * argv[]) {
         }
 
         // ****************************************************************************************
-        // Vorticity
+        // Bound Velocity
         // ****************************************************************************************
-#ifdef VORTICITY
-        vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, vorticity).wait();
-
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
@@ -621,10 +582,6 @@ int main(int argc, char * argv[]) {
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 #endif // NEUMANN_BOUND
-
-        vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, time_step, 0.035f, 0.035f, vorticity, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-#endif // VORTICITY
 
         // ****************************************************************************************
         // Diffusion for viscous fluid
@@ -639,6 +596,17 @@ int main(int argc, char * argv[]) {
                 tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
             }
         }
+
+        // ****************************************************************************************
+        // Bound Velocity
+        // ****************************************************************************************
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
 
         // ****************************************************************************************
         // Project divergent velocity into divergence-free field
@@ -685,31 +653,121 @@ int main(int argc, char * argv[]) {
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
         // ****************************************************************************************
-        // Diffusion for dye
+        // Advect Velocity
         // ****************************************************************************************
-        //centerFactor = 1.0f / (1.0f * time_step);
-        //stencilFactor = 1.0f / (4.0f + centerFactor);
-        //for (int i = 0; i < JACOBI_REPS; i++)
-        //{
-        //    //jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, target_texture, new_pressure).wait();
-        //    /*jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, old_pressure, new_pressure).wait();
-        //    jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, target_texture, target_texture, new_vel).wait();*/
-        //    //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, old_pressure, new_pressure).wait();
-        //    jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
-        //    //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
-        //    tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-        //}
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // ****************************************************************************************
+        // Vorticity
+        // ****************************************************************************************
+#ifdef VORTICITY
+        vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, vorticity).wait();
+
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
+        vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, time_step, 0.035f, 0.035f, vorticity, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // VORTICITY
+
+        // ****************************************************************************************
+        // Project divergent velocity into divergence-free field
+        // ****************************************************************************************
+
+        // Divergence of velocity field
+        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, velocity_divergence).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // Pressure disturbance
+#ifdef RESET_PRESSURE_EACH_ITER
+        image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+        image_resetter(cl::EnqueueArgs(queue, global_test), new_pressure).wait();
+#endif // RESET_PRESSURE_EACH_ITER
+
+        centerFactor = -1.0f;
+        stencilFactor = 0.25f;
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+#ifdef NEUMANN_BOUND
+            boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#else
+            boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#endif // NEUMANN_BOUND
+
+            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, target_texture, new_pressure).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, velocity_divergence, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+        }
+
+        // Set no-slip velocity
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // Subtract gradient(p) from u to get divergence-free velocity field
+        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // ****************************************************************************************
+        // Advect Dye
+        // ****************************************************************************************
+        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
 
         // ****************************************************************************************
         // Bound Dye
         // ****************************************************************************************
-//#ifdef NEUMANN_BOUND
-//        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
-//        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-//#else
-//        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
-//        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-//#endif // NEUMANN_BOUND
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // ****************************************************************************************
+        // Diffusion for dye
+        // ****************************************************************************************
+        centerFactor = 1.0f / (gui.viscosity * time_step);
+        stencilFactor = 1.0f / (4.0f + centerFactor);
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, dye_texture, dye_texture_new).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        }
+
+        // ****************************************************************************************
+        // Bound Dye
+        // ****************************************************************************************
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
 
         // Display stuff
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
