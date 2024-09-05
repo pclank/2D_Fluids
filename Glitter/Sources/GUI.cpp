@@ -1,4 +1,5 @@
 #include "GUI.hpp"
+#include <vector>
 
 GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     :
@@ -11,9 +12,16 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     mix_bias = 0.5f;
     cursor_enabled = true;
     clicking_enabled = false;
+    apply_gravity = false;
     clicked = false;
     reset_pressed = false;
-    click_mode = PRESSURE_MODE;
+    click_mode = VELOCITY_MODE;
+    dye_extreme_mode = false;
+    gui_enabled = true;
+    rendered_texture = DYE;
+    selected_index = 2;
+    viscosity = 0.5f;
+    dx = 1.0f;
 }
 
 void GUI::Init()
@@ -37,7 +45,8 @@ void GUI::Init()
 
 void GUI::Render()
 {
-    const char* click_mode_string = (click_mode == PRESSURE_MODE) ? "Set to pressure mode" : "Set to dye mode";
+    const char* click_mode_string = (click_mode == VELOCITY_MODE) ? "Set to velocity mode" : "Set to dye mode";
+    const std::vector<const char*> selectables{ "VELOCITY", "PRESSURE", "DYE" };
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -46,11 +55,32 @@ void GUI::Render()
     ImGui::Begin("Control Window");
     ImGui::Text("DeltaTime: %f", m_timer.GetDeltaTime());
     ImGui::Text("FPS: %.2f", m_timer.GetFPS());
+    ImGui::Separator();
     ImGui::Checkbox("Enable/Disable clicking with \'G\'", &clicking_enabled);
-    ImGui::Text(click_mode_string);
+    ImGui::TextColored(ImVec4(0.4f, 0.0f, 1.0f, 1.0f), click_mode_string);
+    ImGui::Checkbox("Apply gravity", &apply_gravity);
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
-    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 10.0f, "%.1f");
+    ImGui::Checkbox("Dye extreme mode", &dye_extreme_mode);
+    ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 50.0f, "%.1f");
+    ImGui::SliderFloat("Fluid Viscosity", &viscosity, 0.0f, 10.0f, "%.1f");
+    ImGui::SliderFloat("dx", &dx, 0.1f, 2.0f, "%.1f");
+    ImGui::Separator();
+    if (ImGui::BeginCombo("texture", selectables[selected_index]))
+    {
+        for (int i = 0; i < selectables.size(); ++i) {
+            const bool isSelected = (selected_index == i);
+            if (ImGui::Selectable(selectables[i], isSelected))
+                selected_index = i;
+
+            // Set the initial focus when opening the combo
+            // (scrolling + keyboard navigation focus)
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
     ImGui::SliderFloat("Mix Bias", &mix_bias, 0.0f, 1.0f, "%.2f");
     ImGui::Text("Mouse cursor stuff:");
     ImGui::Text("Cursor_x: %f", mouse_xpos);
@@ -71,6 +101,11 @@ void GUI::Cleanup()
 bool GUI::IsForceEnabled()
 {
     return rand_force;
+}
+
+void GUI::ResetForceEnabled()
+{
+    rand_force = false;
 }
 
 float GUI::GetForceScale()

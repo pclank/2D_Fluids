@@ -8,7 +8,11 @@
 #include <backends/imgui_impl_opengl3.h>
 
 enum ClickMode {
-    PRESSURE_MODE, DYE_MODE
+    VELOCITY_MODE, DYE_MODE
+};
+
+enum RenderedTexture {
+    VELOCITY, PRESSURE, DYE
 };
 
 /// <summary>
@@ -39,6 +43,11 @@ public:
     /// </summary>
     /// <returns>: the flag</returns>
     bool IsForceEnabled();
+
+    /// <summary>
+    /// Reset random force flag
+    /// </summary>
+    void ResetForceEnabled();
 
     /// <summary>
     /// Returns the scale of the random force
@@ -86,7 +95,14 @@ public:
     bool clicking_enabled;
     bool clicked;
     bool reset_pressed;
+    bool dye_extreme_mode;
+    bool gui_enabled;
+    bool apply_gravity;
+    int selected_index;
+    float viscosity;
+    float dx;
     ClickMode click_mode;
+    RenderedTexture rendered_texture;
 
 private:
     GLFWwindow* p_window;

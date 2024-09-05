@@ -16,7 +16,9 @@
 #include <direct.h>
 #include <wingdi.h>
 
+// Some Globals
 GUI* gui_pointer;
+const std::vector<RenderedTexture> selectables{ VELOCITY, PRESSURE, DYE };
 
 // Callbacks
 void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
@@ -188,6 +190,17 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL velocity divergence texture
+    unsigned int gl_velocity_divergence;
+    glGenTextures(1, &gl_velocity_divergence);
+    glBindTexture(GL_TEXTURE_2D, gl_velocity_divergence);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     // OpenGL pressure textures
     unsigned int gl_pressure_old;
     glGenTextures(1, &gl_pressure_old);
@@ -231,6 +244,17 @@ int main(int argc, char * argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // OpenGL dye texture new
+    unsigned int gl_dye_new;
+    glGenTextures(1, &gl_dye_new);
+    glBindTexture(GL_TEXTURE_2D, gl_dye_new);
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     // OpenGL display texture
     unsigned int gl_display;
     glGenTextures(1, &gl_display);
@@ -262,6 +286,9 @@ int main(int argc, char * argv[]) {
         glBindTexture(GL_TEXTURE_2D, gl_texture_new);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_velocity_divergence);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -272,6 +299,9 @@ int main(int argc, char * argv[]) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_dye);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, gl_dye_new);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, src_channels, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, gl_display);
@@ -298,6 +328,9 @@ int main(int argc, char * argv[]) {
     new_vel = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_texture_new, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
+    velocity_divergence = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_velocity_divergence, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
     old_pressure = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_pressure_old, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
@@ -308,6 +341,9 @@ int main(int argc, char * argv[]) {
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
     dye_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_dye, &err);
+    std::cout << "Created CL Image2D with err:\t" << err << std::endl;
+
+    dye_texture_new = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_dye_new, &err);
     std::cout << "Created CL Image2D with err:\t" << err << std::endl;
 
     display_texture = clCreateFromGLTexture(context(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_display, &err);
@@ -328,6 +364,8 @@ int main(int argc, char * argv[]) {
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &velocity_divergence(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
@@ -335,6 +373,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+    std::cout << "Acquired GL objects with err:\t" << err << std::endl;
+    err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
     err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Acquired GL objects with err:\t" << err << std::endl;
@@ -382,18 +422,25 @@ int main(int argc, char * argv[]) {
     image_resetter = cl::Kernel(program, "ResetImage");
     click_effecter = cl::Kernel(program, "ClickAddPressure");
     dye_adder = cl::Kernel(program, "AddDye");
+    gravitier = cl::Kernel(program, "ApplyGravity");
 
 #ifdef RESET_TEXTURES
     image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), new_vel).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), velocity_divergence).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), new_pressure).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+    image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture_new).wait();
 #endif // RESET_TEXTURES
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_texture_new);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_velocity_divergence);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -402,6 +449,8 @@ int main(int argc, char * argv[]) {
     glBindTexture(GL_TEXTURE_2D, gl_vorticity);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_dye);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gl_dye_new);
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gl_display);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -425,6 +474,8 @@ int main(int argc, char * argv[]) {
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &velocity_divergence(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
@@ -432,6 +483,8 @@ int main(int argc, char * argv[]) {
     err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+    std::cout << "Releasing GL objects with err:\t" << err << std::endl;
+    err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
     err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
     std::cout << "Releasing GL objects with err:\t" << err << std::endl;
@@ -469,20 +522,32 @@ int main(int argc, char * argv[]) {
         // Acquire shared objects
         err = clEnqueueAcquireGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &velocity_divergence(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+        err = clEnqueueAcquireGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
         err = clEnqueueAcquireGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Reset simulation
         if (gui.reset_pressed)
         {
             image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), new_vel).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), velocity_divergence).wait();
             image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), new_pressure).wait();
             image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+            image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture_new).wait();
             gui.reset_pressed = false;
         }
+
+#ifndef DISABLE_SIM
+        // ****************************************************************************************
+        // Add Dye or Force
+        // ****************************************************************************************
 
         // Random force
         if (gui.IsForceEnabled())
@@ -491,23 +556,32 @@ int main(int argc, char * argv[]) {
             tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
             //force_randomizer(cl::EnqueueArgs(queue, global_test), gui.GetForceScale(), old_pressure, new_pressure).wait();
             //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
+
+            gui.ResetForceEnabled();
+        }
+
+        // Gravity
+        if (gui.apply_gravity)
+        {
+            gravitier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         }
 
         // Click adder
         if (gui.clicked && gui.clicking_enabled)
         {
-            // Pressure adder
-            if (gui.click_mode == PRESSURE_MODE)
-                click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), new_pressure, old_pressure).wait();
+            // Velocity adder
+            /*if (gui.click_mode == VELOCITY_MODE)
+                click_effecter(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), gui.dye_extreme_mode, new_vel, target_texture).wait();*/
+            if (gui.click_mode == VELOCITY_MODE)
+                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), gui.dye_extreme_mode, target_texture).wait();
             // Dye adder
             else
-                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), dye_texture).wait();
+                dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), gui.dye_extreme_mode, dye_texture).wait();
         }
 
-#ifndef DISABLE_SIM
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / 1, target_texture, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-
+        // ****************************************************************************************
+        // Bound Velocity
+        // ****************************************************************************************
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
@@ -516,14 +590,79 @@ int main(int argc, char * argv[]) {
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 #endif // NEUMANN_BOUND
 
-        // Run kernels
+        // ****************************************************************************************
+        // Diffusion for viscous fluid
+        // ****************************************************************************************
+        float centerFactor = 1.0f / (gui.viscosity * time_step);
+        float stencilFactor = 1.0f / (4.0f + centerFactor);
+        if (gui.viscosity > 0.0f)
+        {
+            for (int i = 0; i < JACOBI_REPS; i++)
+            {
+                jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, target_texture, target_texture, new_vel).wait();
+                tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+            }
+        }
+
+        // ****************************************************************************************
+        // Bound Velocity
+        // ****************************************************************************************
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // ****************************************************************************************
+        // Project divergent velocity into divergence-free field
+        // ****************************************************************************************
+
+        // Divergence of velocity field
+        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, velocity_divergence).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // Pressure disturbance
+#ifdef RESET_PRESSURE_EACH_ITER
+        image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+        image_resetter(cl::EnqueueArgs(queue, global_test), new_pressure).wait();
+#endif // RESET_PRESSURE_EACH_ITER
+
+        centerFactor = -1.0f;
+        stencilFactor = 0.25f;
         for (int i = 0; i < JACOBI_REPS; i++)
         {
-            jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, target_texture, new_pressure).wait();
+#ifdef NEUMANN_BOUND
+            boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#else
+            boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#endif // NEUMANN_BOUND
+
+            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, target_texture, new_pressure).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, velocity_divergence, new_pressure).wait();
             tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
         }
 
-        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / 1, target_texture, new_vel).wait();
+        // Set no-slip velocity
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // Subtract gradient(p) from u to get divergence-free velocity field
+        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // ****************************************************************************************
+        // Advect Velocity
+        // ****************************************************************************************
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
 #ifdef NEUMANN_BOUND
@@ -534,27 +673,11 @@ int main(int argc, char * argv[]) {
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 #endif // NEUMANN_BOUND
 
-        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / 1, old_pressure, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-
-#ifdef NEUMANN_BOUND
-        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-
-        boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
-#else
-        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
-
-        boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
-#endif // NEUMANN_BOUND
-
+        // ****************************************************************************************
+        // Vorticity
+        // ****************************************************************************************
 #ifdef VORTICITY
-        vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / 1, new_vel, vorticity).wait();
-        vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / 1, main_timer.GetDeltaTime(), 1.0f, 1.0f, vorticity, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        vorticitier(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, vorticity).wait();
 
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
@@ -563,7 +686,95 @@ int main(int argc, char * argv[]) {
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 #endif // NEUMANN_BOUND
+
+        vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, time_step, 0.035f, 0.035f, vorticity, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 #endif // VORTICITY
+
+        // ****************************************************************************************
+        // Project divergent velocity into divergence-free field
+        // ****************************************************************************************
+
+        // Divergence of velocity field
+        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, velocity_divergence).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // Pressure disturbance
+#ifdef RESET_PRESSURE_EACH_ITER
+        image_resetter(cl::EnqueueArgs(queue, global_test), old_pressure).wait();
+        image_resetter(cl::EnqueueArgs(queue, global_test), new_pressure).wait();
+#endif // RESET_PRESSURE_EACH_ITER
+
+        centerFactor = -1.0f;
+        stencilFactor = 0.25f;
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+#ifdef NEUMANN_BOUND
+            boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#else
+            boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+#endif // NEUMANN_BOUND
+
+            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, target_texture, new_pressure).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, velocity_divergence, new_pressure).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+        }
+
+        // Set no-slip velocity
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // Subtract gradient(p) from u to get divergence-free velocity field
+        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+
+        // ****************************************************************************************
+        // Advect Dye
+        // ****************************************************************************************
+        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+
+        // ****************************************************************************************
+        // Bound Dye
+        // ****************************************************************************************
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
+
+        // ****************************************************************************************
+        // Diffusion for dye
+        // ****************************************************************************************
+        centerFactor = 1.0f / (gui.viscosity * time_step);
+        stencilFactor = 1.0f / (4.0f + centerFactor);
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, dye_texture, dye_texture_new).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        }
+
+        // ****************************************************************************************
+        // Bound Dye
+        // ****************************************************************************************
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
 
         // Display stuff
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
@@ -573,10 +784,12 @@ int main(int argc, char * argv[]) {
         // Release shared objects
         err = clEnqueueReleaseGLObjects(queue(), 1, &target_texture(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_vel(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &velocity_divergence(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &old_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &new_pressure(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &vorticity(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture(), 0, NULL, NULL);
+        err = clEnqueueReleaseGLObjects(queue(), 1, &dye_texture_new(), 0, NULL, NULL);
         err = clEnqueueReleaseGLObjects(queue(), 1, &display_texture(), 0, NULL, NULL);
 
         // Flush CL queue
@@ -587,7 +800,15 @@ int main(int argc, char * argv[]) {
         //glBindTexture(GL_TEXTURE_2D, gl_texture_new);
         //glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
-        glBindTexture(GL_TEXTURE_2D, gl_display);
+        //glBindTexture(GL_TEXTURE_2D, gl_display);
+
+        if (selectables[gui.selected_index] == DYE)
+            glBindTexture(GL_TEXTURE_2D, gl_dye);
+        else if (selectables[gui.selected_index] == VELOCITY)
+            glBindTexture(GL_TEXTURE_2D, gl_texture);
+        else if (selectables[gui.selected_index] == PRESSURE)
+            glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+
         glGenerateMipmap(GL_TEXTURE_2D);
 
         // render container
@@ -596,7 +817,8 @@ int main(int argc, char * argv[]) {
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Render GUI
-        gui.Render();
+        if (gui.gui_enabled)
+            gui.Render();
 
         // Reset input flags
         gui.ResetInputFlags();
@@ -684,6 +906,11 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
     // Switch click mode
     else if (key == GLFW_KEY_M && action == GLFW_PRESS)
     {
-        gui_pointer->click_mode = (gui_pointer->click_mode == PRESSURE_MODE) ? DYE_MODE : PRESSURE_MODE;
+        gui_pointer->click_mode = (gui_pointer->click_mode == VELOCITY_MODE) ? DYE_MODE : VELOCITY_MODE;
+    }
+    // Enable/Disable GUI
+    else if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+    {
+        gui_pointer->gui_enabled = !gui_pointer->gui_enabled;
     }
 }

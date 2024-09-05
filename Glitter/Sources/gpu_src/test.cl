@@ -91,7 +91,8 @@ kernel void tex_read_test(read_only image2d_t tgt_tex, __global float* debug_buf
 }
 
 kernel void AvectFluid(float timestep, float rdx,
-	// 1 / grid scale
+	// 1 / grid scale,
+	float dissipation,
 	read_only image2d_t u,		// input velocity
 	read_only image2d_t xOld,	// qty to advect
 	write_only image2d_t xNew	// advected qty
@@ -125,7 +126,7 @@ kernel void AvectFluid(float timestep, float rdx,
 
 	//interpolated = (AdvancedRandomFloat(seed) <= 0.5f) ? interpolated : (float4)(AdvancedRandomFloat(seed));
 
-	write_imagef(xNew, coords, interpolated);
+	write_imagef(xNew, coords, dissipation * interpolated);
 }
 
 kernel void CopyTexture(read_only image2d_t a, write_only image2d_t b)
@@ -151,8 +152,8 @@ kernel void Divergence(float half_rdx, read_only image2d_t vector_field, write_o
 	float4 bottom = read_imagef(vector_field, sampler, coords - (int2)(0, 1));
 	float4 top = read_imagef(vector_field, sampler, coords + (int2)(0, 1));
 
-	//float4 div = (float4)(half_rdx * (right.x - left.x + top.y - bottom.y));
-	float4 div = (float4)((right.x - left.x + top.y - bottom.y));
+	float4 div = (float4)(half_rdx * (right.x - left.x + top.y - bottom.y));
+	//float4 div = (float4)((right.x - left.x + top.y - bottom.y));
 
 	write_imagef(out, coords, div);
 }
@@ -171,7 +172,7 @@ kernel void Jacobi(float alpha, float rBeta, read_only image2d_t x_vector, read_
 
 	float4 bC = read_imagef(b_vector, sampler, coords);
 
-	float4 pixel = (left + right + bottom + top + (alpha * bC)) * rBeta;
+	float4 pixel = (float4)((left + right + bottom + top + (alpha * bC)) * rBeta);
 	write_imagef(x_new, coords, pixel);
 }
 
@@ -300,8 +301,8 @@ kernel void NeumannBoundary(float scale, read_only image2d_t u, write_only image
 		offset = (int2)(0, 1);
 	}
 
-	//float4 bv = scale * read_imagef(u, sampler, coords + offset);
-	float4 bv = (float4)(0.0f);
+	float4 bv = scale * read_imagef(u, sampler, coords + offset);
+	//float4 bv = (float4)(0.0f);
 
 	write_imagef(uNew, coords, bv);
 }
@@ -398,7 +399,7 @@ kernel void RandomForce(float scale, int dir_flag, read_only image2d_t src, writ
 			tgt_val.x = -tgt_val.x;
 		else if (dir_val >= 0.2f && dir_val < 0.4f)
 			tgt_val.y = -tgt_val.y;
-		else if (dir_val >= 0.4f)
+		else if (dir_val >= 0.4f && dir_val < 0.6f)
 		{
 			tgt_val.x = -tgt_val.x;
 			tgt_val.y = -tgt_val.y;
@@ -432,7 +433,7 @@ kernel void ClickEffectTest(int xpos, int ypos, write_only image2d_t tgt)
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), (float4)(1.0f, 0.0f, 0.0f, 1.0f));
 }
 
-kernel void ClickAddPressure(int xpos, int ypos, float scale, read_only image2d_t src, write_only image2d_t tgt)
+kernel void ClickAddPressure(int xpos, int ypos, float scale, int extreme_flag, read_only image2d_t src, write_only image2d_t tgt)
 {
 	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
 
@@ -440,7 +441,26 @@ kernel void ClickAddPressure(int xpos, int ypos, float scale, read_only image2d_
 
 	float4 src_val = read_imagef(src, sampler, coords);
 	float random_val = AdvancedRandomFloat(seed);
-	float4 tgt_val = src_val + scale * (float4)(random_val, random_val, random_val, 1.0f);
+	float4 tgt_val = src_val + scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+
+	if (extreme_flag == 1)
+	{
+		write_imagef(tgt, coords, tgt_val);
+
+		for (int i = 1; i < 40; i++)
+		{
+			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		}
+
+		return;
+	}
 
 	write_imagef(tgt, coords, tgt_val);
 	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
@@ -453,14 +473,34 @@ kernel void ClickAddPressure(int xpos, int ypos, float scale, read_only image2d_
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
 }
 
-kernel void AddDye(int xpos, int ypos, float scale, write_only image2d_t tgt)
+kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only image2d_t tgt)
 {
 	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
 
 	uint seed = coords.x + coords.y * get_image_width(tgt);
 
-	float random_val = AdvancedRandomFloat(seed);
-	float4 tgt_val = scale * (float4)(random_val, random_val, random_val, 1.0f);
+	/*float random_val = AdvancedRandomFloat(seed);
+	float4 tgt_val = scale * (float4)(random_val, random_val, random_val, 1.0f);*/
+	float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+
+	if (extreme_flag == 1)
+	{
+		write_imagef(tgt, coords, tgt_val);
+
+		for (int i = 1; i < 40; i++)
+		{
+			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		}
+
+		return;
+	}
 
 	write_imagef(tgt, coords, tgt_val);
 	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
@@ -471,4 +511,15 @@ kernel void AddDye(int xpos, int ypos, float scale, write_only image2d_t tgt)
 	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
 	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+}
+
+kernel void ApplyGravity(read_only image2d_t src, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 src_val = read_imagef(src, sampler, coords);
+
+	write_imagef(tgt, coords, src_val - (float4)(0.0f, 9.764, 0.0f, 1.0f));
 }

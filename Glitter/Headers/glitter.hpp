@@ -50,6 +50,7 @@ cl::Kernel click_effect_test_kernel;
 cl::Kernel image_reset_kernel;
 cl::Kernel click_effect_kernel;
 cl::Kernel add_dye_kernel;
+cl::Kernel gravity_kernel;
 
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
@@ -85,6 +86,7 @@ unsigned int indices[] = {
 #define NEUMANN_BOUND
 //#define DISABLE_SIM
 #define RESET_TEXTURES
+//#define RESET_PRESSURE_EACH_ITER
 #define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST
@@ -94,7 +96,7 @@ cl::make_kernel<cl::Image2D, cl::Buffer> debug_tester(debug_kernel);
 cl::make_kernel<cl::Buffer> tester(test_kernel);
 #endif // TEXTURE_TEST
 
-cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> advecter(advect_kernel);
+cl::make_kernel<float, float, float, cl::Image2D, cl::Image2D, cl::Image2D> advecter(advect_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> tex_copier(tex_copy_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D> divergencer(divergence_kernel);
 cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> jacobier(divergence_kernel);
@@ -110,18 +112,21 @@ cl::make_kernel<cl::Image2D, cl::Image2D> neg_checker(neg_check_kernel);
 cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
 cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_kernel);
 cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
-cl::make_kernel<int, int, float, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
-cl::make_kernel<int, int, float, cl::Image2D> dye_adder(add_dye_kernel);
+cl::make_kernel<int, int, float, int, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
+cl::make_kernel<int, int, float, int, cl::Image2D> dye_adder(add_dye_kernel);
+cl::make_kernel<cl::Image2D, cl::Image2D> gravitier(gravity_kernel);
 
 // Images
 cl::Image2D target_texture;
 cl::Image2D old_vel;
 cl::Image2D new_vel;
+cl::Image2D velocity_divergence;
 cl::Image2D old_pressure;
 cl::Image2D new_pressure;
 cl::Image2D vorticity;
 cl::Image2D display_texture;
 cl::Image2D dye_texture;
+cl::Image2D dye_texture_new;
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.
