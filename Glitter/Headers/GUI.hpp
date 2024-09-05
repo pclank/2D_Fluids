@@ -93,6 +93,7 @@ public:
     bool dye_extreme_mode;
     bool gui_enabled;
     int selected_index;
+    float viscosity;
     ClickMode click_mode;
     RenderedTexture rendered_texture;
 

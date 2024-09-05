@@ -80,7 +80,7 @@ unsigned int indices[] = {
 #define TEXTURE_TEST
 #define LOAD_TEXTURE
 //#define RAND_TEX
-//#define STD_TIMESTEP
+#define STD_TIMESTEP
 #define VORTICITY
 #define NEUMANN_BOUND
 //#define DISABLE_SIM
