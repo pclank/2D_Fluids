@@ -80,11 +80,12 @@ unsigned int indices[] = {
 #define TEXTURE_TEST
 #define LOAD_TEXTURE
 //#define RAND_TEX
-#define STD_TIMESTEP
+//#define STD_TIMESTEP
 #define VORTICITY
 #define NEUMANN_BOUND
 //#define DISABLE_SIM
 #define RESET_TEXTURES
+#define RESET_PRESSURE_EACH_ITER
 #define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST
@@ -94,7 +95,7 @@ cl::make_kernel<cl::Image2D, cl::Buffer> debug_tester(debug_kernel);
 cl::make_kernel<cl::Buffer> tester(test_kernel);
 #endif // TEXTURE_TEST
 
-cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> advecter(advect_kernel);
+cl::make_kernel<float, float, float, cl::Image2D, cl::Image2D, cl::Image2D> advecter(advect_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> tex_copier(tex_copy_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D> divergencer(divergence_kernel);
 cl::make_kernel<float, float, cl::Image2D, cl::Image2D, cl::Image2D> jacobier(divergence_kernel);

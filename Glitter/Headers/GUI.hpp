@@ -45,6 +45,11 @@ public:
     bool IsForceEnabled();
 
     /// <summary>
+    /// Reset random force flag
+    /// </summary>
+    void ResetForceEnabled();
+
+    /// <summary>
     /// Returns the scale of the random force
     /// </summary>
     /// <returns>: the scale</returns>
@@ -94,6 +99,7 @@ public:
     bool gui_enabled;
     int selected_index;
     float viscosity;
+    float dx;
     ClickMode click_mode;
     RenderedTexture rendered_texture;
 

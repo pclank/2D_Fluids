@@ -91,7 +91,8 @@ kernel void tex_read_test(read_only image2d_t tgt_tex, __global float* debug_buf
 }
 
 kernel void AvectFluid(float timestep, float rdx,
-	// 1 / grid scale
+	// 1 / grid scale,
+	float dissipation,
 	read_only image2d_t u,		// input velocity
 	read_only image2d_t xOld,	// qty to advect
 	write_only image2d_t xNew	// advected qty
@@ -125,7 +126,7 @@ kernel void AvectFluid(float timestep, float rdx,
 
 	//interpolated = (AdvancedRandomFloat(seed) <= 0.5f) ? interpolated : (float4)(AdvancedRandomFloat(seed));
 
-	write_imagef(xNew, coords, interpolated);
+	write_imagef(xNew, coords, dissipation * interpolated);
 }
 
 kernel void CopyTexture(read_only image2d_t a, write_only image2d_t b)

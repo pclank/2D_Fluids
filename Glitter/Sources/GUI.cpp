@@ -20,6 +20,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     rendered_texture = DYE;
     selected_index = 2;
     viscosity = 0.0f;
+    dx = 1.0f;
 }
 
 void GUI::Init()
@@ -61,6 +62,7 @@ void GUI::Render()
     ImGui::Checkbox("Dye extreme mode", &dye_extreme_mode);
     ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 50.0f, "%.1f");
     ImGui::SliderFloat("Fluid Viscosity", &viscosity, 0.0f, 10.0f, "%.1f");
+    ImGui::SliderFloat("dx", &dx, 0.1f, 2.0f, "%.1f");
     ImGui::Separator();
     if (ImGui::BeginCombo("texture", selectables[selected_index]))
     {
@@ -97,6 +99,11 @@ void GUI::Cleanup()
 bool GUI::IsForceEnabled()
 {
     return rand_force;
+}
+
+void GUI::ResetForceEnabled()
+{
+    rand_force = false;
 }
 
 float GUI::GetForceScale()
