@@ -687,29 +687,25 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
         // Diffusion for dye
         // ****************************************************************************************
-        //centerFactor = 1.0f / (1.0f * time_step);
-        //stencilFactor = 1.0f / (4.0f + centerFactor);
-        //for (int i = 0; i < JACOBI_REPS; i++)
-        //{
-        //    //jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, target_texture, new_pressure).wait();
-        //    /*jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, old_pressure, new_pressure).wait();
-        //    jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, target_texture, target_texture, new_vel).wait();*/
-        //    //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, old_pressure, new_pressure).wait();
-        //    jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
-        //    //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
-        //    tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-        //}
+        centerFactor = 1.0f / (0.5f * time_step);
+        stencilFactor = 1.0f / (4.0f + centerFactor);
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, old_pressure, new_pressure).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, dye_texture, dye_texture_new).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        }
 
         // ****************************************************************************************
         // Bound Dye
         // ****************************************************************************************
-//#ifdef NEUMANN_BOUND
-//        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
-//        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-//#else
-//        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
-//        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-//#endif // NEUMANN_BOUND
+#ifdef NEUMANN_BOUND
+        boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#else
+        boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
+        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+#endif // NEUMANN_BOUND
 
         // Display stuff
         mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
