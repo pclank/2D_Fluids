@@ -111,13 +111,14 @@ cl::make_kernel<cl::Image2D, cl::Image2D> neg_checker(neg_check_kernel);
 cl::make_kernel<float, int, cl::Image2D, cl::Image2D> force_randomizer(force_randomize_kernel);
 cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_kernel);
 cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
-cl::make_kernel<int, int, float, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
+cl::make_kernel<int, int, float, int, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
 cl::make_kernel<int, int, float, int, cl::Image2D> dye_adder(add_dye_kernel);
 
 // Images
 cl::Image2D target_texture;
 cl::Image2D old_vel;
 cl::Image2D new_vel;
+cl::Image2D velocity_divergence;
 cl::Image2D old_pressure;
 cl::Image2D new_pressure;
 cl::Image2D vorticity;

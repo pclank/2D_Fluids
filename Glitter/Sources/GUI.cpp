@@ -14,12 +14,12 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     clicking_enabled = false;
     clicked = false;
     reset_pressed = false;
-    click_mode = PRESSURE_MODE;
+    click_mode = VELOCITY_MODE;
     dye_extreme_mode = false;
     gui_enabled = true;
     rendered_texture = DYE;
     selected_index = 2;
-    viscosity = 0.0f;
+    viscosity = 0.5f;
     dx = 1.0f;
 }
 
@@ -44,7 +44,7 @@ void GUI::Init()
 
 void GUI::Render()
 {
-    const char* click_mode_string = (click_mode == PRESSURE_MODE) ? "Set to pressure mode" : "Set to dye mode";
+    const char* click_mode_string = (click_mode == VELOCITY_MODE) ? "Set to velocity mode" : "Set to dye mode";
     const std::vector<const char*> selectables{ "VELOCITY", "PRESSURE", "DYE" };
 
     ImGui_ImplOpenGL3_NewFrame();

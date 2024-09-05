@@ -8,7 +8,7 @@
 #include <backends/imgui_impl_opengl3.h>
 
 enum ClickMode {
-    PRESSURE_MODE, DYE_MODE
+    VELOCITY_MODE, DYE_MODE
 };
 
 enum RenderedTexture {
