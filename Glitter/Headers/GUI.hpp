@@ -97,6 +97,7 @@ public:
     bool reset_pressed;
     bool dye_extreme_mode;
     bool gui_enabled;
+    bool apply_gravity;
     int selected_index;
     float viscosity;
     float dx;

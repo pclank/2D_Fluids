@@ -399,7 +399,7 @@ kernel void RandomForce(float scale, int dir_flag, read_only image2d_t src, writ
 			tgt_val.x = -tgt_val.x;
 		else if (dir_val >= 0.2f && dir_val < 0.4f)
 			tgt_val.y = -tgt_val.y;
-		else if (dir_val >= 0.4f)
+		else if (dir_val >= 0.4f && dir_val < 0.6f)
 		{
 			tgt_val.x = -tgt_val.x;
 			tgt_val.y = -tgt_val.y;
@@ -447,7 +447,7 @@ kernel void ClickAddPressure(int xpos, int ypos, float scale, int extreme_flag, 
 	{
 		write_imagef(tgt, coords, tgt_val);
 
-		for (int i = 1; i < 100; i++)
+		for (int i = 1; i < 40; i++)
 		{
 			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
@@ -487,7 +487,7 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 	{
 		write_imagef(tgt, coords, tgt_val);
 
-		for (int i = 1; i < 100; i++)
+		for (int i = 1; i < 40; i++)
 		{
 			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
@@ -511,4 +511,15 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
 	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+}
+
+kernel void ApplyGravity(read_only image2d_t src, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	float4 src_val = read_imagef(src, sampler, coords);
+
+	write_imagef(tgt, coords, src_val - (float4)(0.0f, 9.764, 0.0f, 1.0f));
 }

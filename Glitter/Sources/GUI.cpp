@@ -12,6 +12,7 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     mix_bias = 0.5f;
     cursor_enabled = true;
     clicking_enabled = false;
+    apply_gravity = false;
     clicked = false;
     reset_pressed = false;
     click_mode = VELOCITY_MODE;
@@ -57,6 +58,7 @@ void GUI::Render()
     ImGui::Separator();
     ImGui::Checkbox("Enable/Disable clicking with \'G\'", &clicking_enabled);
     ImGui::TextColored(ImVec4(0.4f, 0.0f, 1.0f, 1.0f), click_mode_string);
+    ImGui::Checkbox("Apply gravity", &apply_gravity);
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
     ImGui::Checkbox("Dye extreme mode", &dye_extreme_mode);

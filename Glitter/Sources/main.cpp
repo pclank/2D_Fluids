@@ -422,6 +422,7 @@ int main(int argc, char * argv[]) {
     image_resetter = cl::Kernel(program, "ResetImage");
     click_effecter = cl::Kernel(program, "ClickAddPressure");
     dye_adder = cl::Kernel(program, "AddDye");
+    gravitier = cl::Kernel(program, "ApplyGravity");
 
 #ifdef RESET_TEXTURES
     image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
@@ -557,6 +558,12 @@ int main(int argc, char * argv[]) {
             //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
 
             gui.ResetForceEnabled();
+        }
+
+        // Gravity
+        if (gui.apply_gravity)
+        {
+            gravitier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         }
 
         // Click adder
@@ -732,7 +739,7 @@ int main(int argc, char * argv[]) {
         // Advect Dye
         // ****************************************************************************************
         //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
         tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
 
         // ****************************************************************************************
