@@ -544,6 +544,9 @@ int main(int argc, char * argv[]) {
             gui.reset_pressed = false;
         }
 
+        static const size_t imageSize[3] = {width, height, 1};
+        static const size_t imageOrigin[3] = { 0, 0, 0 };
+
 #ifndef DISABLE_SIM
         // ****************************************************************************************
         // Add Dye or Force
@@ -553,7 +556,8 @@ int main(int argc, char * argv[]) {
         if (gui.IsForceEnabled())
         {
             force_randomizer(cl::EnqueueArgs(queue, global_test), gui.GetForceScale(), gui.GetForceDirFlag(), target_texture, new_vel).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+            clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
             //force_randomizer(cl::EnqueueArgs(queue, global_test), gui.GetForceScale(), old_pressure, new_pressure).wait();
             //tex_copier(cl::EnqueueArgs(queue, global_test), old_pressure, new_pressure).wait();
 
@@ -584,10 +588,12 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // ****************************************************************************************
@@ -600,7 +606,8 @@ int main(int argc, char * argv[]) {
             for (int i = 0; i < JACOBI_REPS; i++)
             {
                 jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, target_texture, target_texture, new_vel).wait();
-                tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+                //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+                clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
             }
         }
 
@@ -609,10 +616,12 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // ****************************************************************************************
@@ -621,7 +630,6 @@ int main(int argc, char * argv[]) {
 
         // Divergence of velocity field
         divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, velocity_divergence).wait();
-        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
 
         // Pressure disturbance
 #ifdef RESET_PRESSURE_EACH_ITER
@@ -635,42 +643,51 @@ int main(int argc, char * argv[]) {
         {
 #ifdef NEUMANN_BOUND
             boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
             boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
             //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, target_texture, new_pressure).wait();
             jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, velocity_divergence, new_pressure).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
         }
 
         // Set no-slip velocity
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // Subtract gradient(p) from u to get divergence-free velocity field
         gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
         // ****************************************************************************************
         // Advect Velocity
         // ****************************************************************************************
         advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // ****************************************************************************************
@@ -681,14 +698,17 @@ int main(int argc, char * argv[]) {
 
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         vorticity_confiner(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, time_step, 0.035f, 0.035f, vorticity, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // VORTICITY
 
         // ****************************************************************************************
@@ -711,46 +731,55 @@ int main(int argc, char * argv[]) {
         {
 #ifdef NEUMANN_BOUND
             boundarier(cl::EnqueueArgs(queue, global_1D), 1.0f, old_pressure, new_pressure).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
             boundarier(cl::EnqueueArgs(queue, global_test), 1.0f, old_pressure, new_pressure).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
             //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, target_texture, new_pressure).wait();
             jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, velocity_divergence, new_pressure).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
+            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
         }
 
         // Set no-slip velocity
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), -1.0f, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // Subtract gradient(p) from u to get divergence-free velocity field
         gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
+        clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
         // ****************************************************************************************
         // Advect Dye
         // ****************************************************************************************
         //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
         advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
         // ****************************************************************************************
         // Bound Dye
         // ****************************************************************************************
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // ****************************************************************************************
@@ -762,7 +791,8 @@ int main(int argc, char * argv[]) {
         {
             //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
             jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, dye_texture, dye_texture_new).wait();
-            tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+            //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+            clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
         }
 
         // ****************************************************************************************
@@ -770,10 +800,12 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
 #ifdef NEUMANN_BOUND
         boundarier(cl::EnqueueArgs(queue, global_1D), 0.0f, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #else
         boundarier(cl::EnqueueArgs(queue, global_test), 0.0f, dye_texture, dye_texture_new).wait();
-        tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+        clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 #endif // NEUMANN_BOUND
 
         // Display stuff

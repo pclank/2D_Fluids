@@ -483,6 +483,7 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 	float4 tgt_val = scale * (float4)(random_val, random_val, random_val, 1.0f);*/
 	float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
 
+	// TODO: Add better algorithm for area-of-effect!
 	if (extreme_flag == 1)
 	{
 		write_imagef(tgt, coords, tgt_val);
@@ -521,5 +522,5 @@ kernel void ApplyGravity(read_only image2d_t src, write_only image2d_t tgt)
 
 	float4 src_val = read_imagef(src, sampler, coords);
 
-	write_imagef(tgt, coords, src_val - (float4)(0.0f, 9.764, 0.0f, 1.0f));
+	write_imagef(tgt, coords, src_val - (float4)(0.0f, 9.764f, 0.0f, 1.0f));
 }
