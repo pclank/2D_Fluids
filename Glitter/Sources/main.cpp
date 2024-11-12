@@ -869,19 +869,38 @@ int main(int argc, char * argv[]) {
         //glBindTexture(GL_TEXTURE_2D, gl_vorticity);
         //glBindTexture(GL_TEXTURE_2D, gl_display);
 
-        if (selectables[gui.selected_index] == DYE)
+        /*if (selectables[gui.selected_index] == DYE)
             glBindTexture(GL_TEXTURE_2D, gl_dye);
         else if (selectables[gui.selected_index] == VELOCITY)
             glBindTexture(GL_TEXTURE_2D, gl_texture);
         else if (selectables[gui.selected_index] == PRESSURE)
-            glBindTexture(GL_TEXTURE_2D, gl_pressure_old);
+            glBindTexture(GL_TEXTURE_2D, gl_pressure_old);*/
+
+        // Bind Framebuffer
+        static GLuint fboId = 0;
+        glGenFramebuffers(1, &fboId);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, fboId);
+
+        if (selectables[gui.selected_index] == DYE)
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                GL_TEXTURE_2D, gl_dye, 0);
+        else if (selectables[gui.selected_index] == VELOCITY)
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                GL_TEXTURE_2D, gl_texture, 0);
+        else if (selectables[gui.selected_index] == PRESSURE)
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                GL_TEXTURE_2D, gl_pressure_old, 0);
 
         glGenerateMipmap(GL_TEXTURE_2D);
 
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+            GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
         // render container
-        simple_shader.use();
+        /*simple_shader.use();
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);*/
 
         // Render GUI
         if (gui.gui_enabled)
