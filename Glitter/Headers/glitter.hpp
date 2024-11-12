@@ -51,6 +51,7 @@ cl::Kernel image_reset_kernel;
 cl::Kernel click_effect_kernel;
 cl::Kernel add_dye_kernel;
 cl::Kernel gravity_kernel;
+cl::Kernel vel_init_kernel;
 
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
@@ -87,6 +88,7 @@ unsigned int indices[] = {
 //#define DISABLE_SIM
 #define RESET_TEXTURES
 //#define RESET_PRESSURE_EACH_ITER
+#define INITIALIZE_VEL
 #define JACOBI_REPS 50
 
 #ifdef TEXTURE_TEST
@@ -115,6 +117,7 @@ cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
 cl::make_kernel<int, int, float, int, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
 cl::make_kernel<int, int, float, int, cl::Image2D> dye_adder(add_dye_kernel);
 cl::make_kernel<cl::Image2D, cl::Image2D> gravitier(gravity_kernel);
+cl::make_kernel<cl::Image2D> velocity_initializer(vel_init_kernel);
 
 // Images
 cl::Image2D target_texture;

@@ -126,7 +126,7 @@ float GUI::GetMixBias()
 void GUI::ResetInputFlags()
 {
     // TODO: Add all!
-    clicked = false;
+    //clicked = false;
 }
 
 //void GUI::GuiButtonCallback(GUI_BUTTON button)
