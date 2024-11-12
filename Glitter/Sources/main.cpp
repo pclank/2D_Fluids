@@ -911,13 +911,11 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     if (!gui_pointer->clicked && button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         std::cout << "MOUSE CLICK on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
-        // TODO: Add functionality!
         gui_pointer->clicked = true;
     }
     else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
     {
         std::cout << "MOUSE RELEASE on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
-        // TODO: Add functionality!
         gui_pointer->clicked = false;
     }
 
