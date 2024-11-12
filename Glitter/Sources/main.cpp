@@ -423,6 +423,7 @@ int main(int argc, char * argv[]) {
     click_effecter = cl::Kernel(program, "ClickAddPressure");
     dye_adder = cl::Kernel(program, "AddDye");
     gravitier = cl::Kernel(program, "ApplyGravity");
+    velocity_initializer = cl::Kernel(program, "VelocityInitializer");
 
 #ifdef RESET_TEXTURES
     image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
@@ -434,6 +435,10 @@ int main(int argc, char * argv[]) {
     image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
     image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture_new).wait();
 #endif // RESET_TEXTURES
+
+#ifdef INITIALIZE_VEL
+    velocity_initializer(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+#endif // INITIALIZE_VEL
 
     // We have to generate the mipmaps again!!!
     glBindTexture(GL_TEXTURE_2D, gl_texture);
@@ -541,6 +546,14 @@ int main(int argc, char * argv[]) {
             image_resetter(cl::EnqueueArgs(queue, global_test), vorticity).wait();
             image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
             image_resetter(cl::EnqueueArgs(queue, global_test), dye_texture_new).wait();
+
+#ifdef INITIALIZE_VEL
+            velocity_initializer(cl::EnqueueArgs(queue, global_test), target_texture).wait();
+            velocity_initializer(cl::EnqueueArgs(queue, global_test), new_vel).wait();
+            velocity_initializer(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+            velocity_initializer(cl::EnqueueArgs(queue, global_test), dye_texture).wait();
+#endif // INITIALIZE_VEL
+
             gui.reset_pressed = false;
         }
 
@@ -895,11 +908,17 @@ void CursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 /// <param name="mods"></param>
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    if (!gui_pointer->clicked && button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         std::cout << "MOUSE CLICK on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
         // TODO: Add functionality!
         gui_pointer->clicked = true;
+    }
+    else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+    {
+        std::cout << "MOUSE RELEASE on x: " << gui_pointer->mouse_xpos << " y: " << gui_pointer->mouse_ypos << std::endl;
+        // TODO: Add functionality!
+        gui_pointer->clicked = false;
     }
 
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
