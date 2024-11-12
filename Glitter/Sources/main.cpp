@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <direct.h>
 #include <wingdi.h>
+#include <chrono>
 
 // Some Globals
 GUI* gui_pointer;
@@ -616,12 +617,22 @@ int main(int argc, char * argv[]) {
         float stencilFactor = 1.0f / (4.0f + centerFactor);
         if (gui.viscosity > 0.0f)
         {
+            static std::chrono::time_point<std::chrono::system_clock> start, end;
+
+            start = std::chrono::system_clock::now();
             for (int i = 0; i < JACOBI_REPS; i++)
             {
                 jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, target_texture, target_texture, new_vel).wait();
                 //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
                 clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
             }
+
+            end = std::chrono::system_clock::now();
+
+            std::chrono::duration<double> elapsed_seconds = end - start;
+            std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+            std::cout << "Diffusion Jacobi elapsed time: " << elapsed_seconds.count() << "s\n";
         }
 
         // ****************************************************************************************
@@ -650,6 +661,10 @@ int main(int argc, char * argv[]) {
         image_resetter(cl::EnqueueArgs(queue, global_test), new_pressure).wait();
 #endif // RESET_PRESSURE_EACH_ITER
 
+        static std::chrono::time_point<std::chrono::system_clock> start, end;
+
+        start = std::chrono::system_clock::now();
+
         centerFactor = -1.0f;
         stencilFactor = 0.25f;
         for (int i = 0; i < JACOBI_REPS; i++)
@@ -669,6 +684,13 @@ int main(int argc, char * argv[]) {
             //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
             clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
         }
+
+        end = std::chrono::system_clock::now();
+
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+        std::cout << "Pressure Jacobi elapsed time: " << elapsed_seconds.count() << "s\n";
 
         // Set no-slip velocity
 #ifdef NEUMANN_BOUND

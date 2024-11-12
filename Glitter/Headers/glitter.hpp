@@ -89,7 +89,7 @@ unsigned int indices[] = {
 #define RESET_TEXTURES
 //#define RESET_PRESSURE_EACH_ITER
 #define INITIALIZE_VEL
-#define JACOBI_REPS 50
+#define JACOBI_REPS 15
 
 #ifdef TEXTURE_TEST
 cl::make_kernel<cl::Image2D> tester(test_kernel);
