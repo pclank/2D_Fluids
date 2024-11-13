@@ -103,6 +103,7 @@ public:
     bool gui_enabled;
     bool apply_gravity;
     bool normalize_vel_dir;
+    bool std_timestep;
     int selected_index;
     float viscosity;
     float dx;

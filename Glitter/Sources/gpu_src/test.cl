@@ -232,8 +232,10 @@ kernel void Vorticity(float half_rdx, read_only image2d_t u, write_only image2d_
 	// Neighbors stuff
 	float4 uL = read_imagef(u, sampler, coords - (int2)(1, 0));
 	float4 uR = read_imagef(u, sampler, coords + (int2)(1, 0));
-	float4 uB = read_imagef(u, sampler, coords - (int2)(0, 1));
-	float4 uT = read_imagef(u, sampler, coords + (int2)(0, 1));
+	/*float4 uB = read_imagef(u, sampler, coords - (int2)(0, 1));
+	float4 uT = read_imagef(u, sampler, coords + (int2)(0, 1));*/
+	float4 uB = read_imagef(u, sampler, coords + (int2)(0, 1));
+	float4 uT = read_imagef(u, sampler, coords - (int2)(0, 1));
 
 	float4 vort_val = (float4)(half_rdx * ((uR.y - uL.y) - (uT.x - uB.x)));
 	write_imagef(vort, coords, vort_val);
@@ -250,8 +252,10 @@ kernel void VorticityConfinement(float half_rdx, float timestep, float dxscale_x
 	// Neighbors stuff
 	float4 vL = read_imagef(vort, sampler, coords - (int2)(1, 0));
 	float4 vR = read_imagef(vort, sampler, coords + (int2)(1, 0));
-	float4 vB = read_imagef(vort, sampler, coords - (int2)(0, 1));
-	float4 vT = read_imagef(vort, sampler, coords + (int2)(0, 1));
+	/*float4 vB = read_imagef(vort, sampler, coords - (int2)(0, 1));
+	float4 vT = read_imagef(vort, sampler, coords + (int2)(0, 1));*/
+	float4 vB = read_imagef(vort, sampler, coords + (int2)(0, 1));
+	float4 vT = read_imagef(vort, sampler, coords - (int2)(0, 1));
 
 	float4 vC = read_imagef(vort, sampler, coords);
 

@@ -536,7 +536,7 @@ int main(int argc, char * argv[]) {
 #ifdef STD_TIMESTEP
         float time_step = 1.0f;
 #else
-        float time_step = main_timer.GetDeltaTime();
+        float time_step = (gui.std_timestep) ? 1.0f : main_timer.GetDeltaTime();
 #endif // STD_TIMESTEP
 
         // Background Fill Color
