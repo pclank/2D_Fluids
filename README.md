@@ -4,6 +4,8 @@
  - https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu
  - https://dl.acm.org/doi/10.1145/311535.311548
 
+<img src="2d_fluids_screenshot.png" width="512">
+
 ## Build
 Use CMake to build the solution. Everything should work by default.
 
