@@ -510,12 +510,11 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 	//float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
 	float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 0.0f, 1.0f);
 
-	// TODO: Add better algorithm for area-of-effect!
 	if (extreme_flag == 1)
 	{
 		write_imagef(tgt, coords, tgt_val);
 
-		for (int i = 1; i < 40; i++)
+		/*for (int i = 1; i < 40; i++)
 		{
 			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
@@ -525,6 +524,46 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 			write_imagef(tgt, clamp(coords + i * (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		}*/
+
+
+		for (int i = 1; i < 40; i++)
+		{
+			const int r = i;
+			const int r2 = r * r;
+			int x = r;
+			int y = 0;
+			while (x > y)
+			{
+				write_imagef(tgt, clamp(coords + (int2)(x, y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(y, x), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-x, y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-y, x), 0, get_image_width(tgt) - 1), tgt_val);
+
+				write_imagef(tgt, clamp(coords + (int2)(x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+
+				if (x * x + (y + 1) * (y + 1) > r2)
+					x -= 1;
+
+				y += 1;
+			}
+
+			// This fills some empty pixels
+			if (x == y)
+			{
+				write_imagef(tgt, clamp(coords + (int2)(x, y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(y, x), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-x, y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-y, x), 0, get_image_width(tgt) - 1), tgt_val);
+
+				write_imagef(tgt, clamp(coords + (int2)(x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+				write_imagef(tgt, clamp(coords + (int2)(-y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+			}
 		}
 
 		return;
@@ -552,22 +591,57 @@ kernel void AddVelocity(int xpos, int ypos, int prev_xpos, int prev_ypos, float 
 
 	float4 tgt_val = (float4)(scale * dir.x, scale * dir.y, 0.0f, 1.0f) + src_val;
 
-	// TODO: Add better algorithm for area-of-effect!
 	if (extreme_flag == 1)
 	{
 		write_imagef(tgt, coords, tgt_val);
 
-		for (int i = 1; i < 40; i++)
+		//for (int i = 1; i < 40; i++)
+		//{
+		//	//tgt_val.xy /= i;
+		//	write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+		//	write_imagef(tgt, clamp(coords + i * (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		//}
+
+		const int r = 40;
+		const int r2 = r * r;
+		int x = r;
+		int y = 0;
+		while (x > y)
 		{
-			//tgt_val.xy /= i;
-			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
-			write_imagef(tgt, clamp(coords + i * (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(x, y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(y, x), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-x, y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-y, x), 0, get_image_width(tgt) - 1), tgt_val);
+
+			write_imagef(tgt, clamp(coords + (int2)(x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+
+			if (x * x + (y + 1) * (y + 1) > r2)
+				x -= 1;
+			
+			y += 1;
+		}
+
+		// This fills some empty pixels
+		if (x == y)
+		{
+			write_imagef(tgt, clamp(coords + (int2)(x, y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(y, x), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-x, y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-y, x), 0, get_image_width(tgt) - 1), tgt_val);
+
+			write_imagef(tgt, clamp(coords + (int2)(x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(y, -x), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-x, -y), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + (int2)(-y, -x), 0, get_image_width(tgt) - 1), tgt_val);
 		}
 
 		return;
