@@ -102,6 +102,7 @@ public:
     bool dye_extreme_mode;
     bool gui_enabled;
     bool apply_gravity;
+    bool normalize_vel_dir;
     int selected_index;
     float viscosity;
     float dx;

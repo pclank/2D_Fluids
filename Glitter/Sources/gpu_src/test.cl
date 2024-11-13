@@ -94,7 +94,7 @@ kernel void tex_read_test(read_only image2d_t tgt_tex, __global float* debug_buf
 	debug_buf[x + y * get_image_width(tgt_tex)] = pixel.x;
 }
 
-kernel void AvectFluid(float timestep, float rdx,
+kernel void AdvectFluid(float timestep, float rdx,
 	// 1 / grid scale,
 	float dissipation,
 	read_only image2d_t u,		// input velocity
@@ -541,14 +541,15 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
 }
 
-kernel void AddVelocity(int xpos, int ypos, int prev_xpos, int prev_ypos, float scale, int extreme_flag, read_only image2d_t src, write_only image2d_t tgt)
+kernel void AddVelocity(int xpos, int ypos, int prev_xpos, int prev_ypos, float scale, int extreme_flag, int normalize_flag, read_only image2d_t src, write_only image2d_t tgt)
 {
 	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
 
 	float4 src_val = read_imagef(src, sampler, coords);
 
-	//float2 dir = normalize((float2)(xpos - prev_xpos, ypos - prev_ypos));
-	float2 dir = normalize((float2)(xpos - prev_xpos, prev_ypos - ypos));
+	//float2 dir = (normalize_flag) ? normalize((float2)(xpos - prev_xpos, ypos - prev_ypos)) : (float2)(xpos - prev_xpos, ypos - prev_ypos);
+	float2 dir = (normalize_flag) ? normalize((float2)(xpos - prev_xpos, prev_ypos - ypos)) : (float2)(xpos - prev_xpos, prev_ypos - ypos);
+
 	float4 tgt_val = (float4)(scale * dir.x, scale * dir.y, 0.0f, 1.0f) + src_val;
 
 	// TODO: Add better algorithm for area-of-effect!
@@ -558,6 +559,7 @@ kernel void AddVelocity(int xpos, int ypos, int prev_xpos, int prev_ypos, float 
 
 		for (int i = 1; i < 40; i++)
 		{
+			//tgt_val.xy /= i;
 			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
 			write_imagef(tgt, clamp(coords + i * (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);

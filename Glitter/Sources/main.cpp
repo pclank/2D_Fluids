@@ -414,7 +414,7 @@ int main(int argc, char * argv[]) {
     //debug_tester(cl::EnqueueArgs(queue, global_tex), target_texture, debug_buffer);
     debug_tester(cl::EnqueueArgs(queue, global_test), target_texture, debug_buffer);
 
-    advecter = cl::Kernel(program, "AvectFluid");
+    advecter = cl::Kernel(program, "AdvectFluid");
     //advecter(cl::EnqueueArgs(queue, global_test), 0.1f, 1.0f / 1, target_texture, target_texture, new_vel).wait();
 
     tex_copier = cl::Kernel(program, "CopyTexture");
@@ -621,7 +621,7 @@ int main(int argc, char * argv[]) {
                 dye_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), gui.GetForceScale(), gui.dye_extreme_mode, target_texture).wait();*/
             if (gui.click_mode == VELOCITY_MODE)
             {
-                vel_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), static_cast<int>(gui.mouse_prev_xpos), static_cast<int>(gui.mouse_prev_ypos), gui.GetForceScale(), gui.dye_extreme_mode, target_texture, new_vel).wait();
+                vel_adder(cl::EnqueueArgs(queue, single_thread), static_cast<int>(gui.mouse_xpos), static_cast<int>(gui.mouse_ypos), static_cast<int>(gui.mouse_prev_xpos), static_cast<int>(gui.mouse_prev_ypos), gui.GetForceScale(), gui.dye_extreme_mode, gui.normalize_vel_dir, target_texture, new_vel).wait();
                 clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
             }
             // Dye adder
@@ -632,8 +632,8 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
         // Advect Velocity
         // ****************************************************************************************
-        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, target_texture, new_vel).wait();
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f, 1.0f, target_texture, target_texture, new_vel).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, target_texture, new_vel).wait();
+        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f, 1.0f, target_texture, target_texture, new_vel).wait();
         //tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
@@ -652,8 +652,8 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
 
         // Divergence of velocity field
-        //divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, velocity_divergence).wait();
-        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f, target_texture, velocity_divergence).wait();
+        divergencer(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, target_texture, velocity_divergence).wait();
+        //divergencer(cl::EnqueueArgs(queue, global_test), 0.5f, target_texture, velocity_divergence).wait();
 
         // Pressure disturbance
 #ifdef RESET_PRESSURE_EACH_ITER
@@ -677,7 +677,6 @@ int main(int argc, char * argv[]) {
 //            clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 //#endif // NEUMANN_BOUND
 
-            //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, old_pressure, target_texture, new_pressure).wait();
             jacobier(cl::EnqueueArgs(queue, global_test), -1.0f, 0.25f, old_pressure, velocity_divergence, new_pressure).wait();
             //tex_copier(cl::EnqueueArgs(queue, global_test), new_pressure, old_pressure).wait();
             clEnqueueCopyImage(queue(), new_pressure(), old_pressure(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
@@ -701,8 +700,8 @@ int main(int argc, char * argv[]) {
         std::cout << "Pressure Jacobi elapsed time: " << elapsed_seconds.count() << "s\n";
 
         // Subtract gradient(p) from u to get divergence-free velocity field
-        //gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
-        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f, old_pressure, target_texture, new_vel).wait();
+        gradienter(cl::EnqueueArgs(queue, global_test), 0.5f / gui.dx, old_pressure, target_texture, new_vel).wait();
+        //gradienter(cl::EnqueueArgs(queue, global_test), 0.5f, old_pressure, target_texture, new_vel).wait();
         ////tex_copier(cl::EnqueueArgs(queue, global_test), new_vel, target_texture).wait();
         clEnqueueCopyImage(queue(), new_vel(), target_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
@@ -783,7 +782,8 @@ int main(int argc, char * argv[]) {
         // ****************************************************************************************
         //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 0.995f, target_texture, dye_texture, dye_texture_new).wait();
         //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
-        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
+        //advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
+        advecter(cl::EnqueueArgs(queue, global_test), time_step, 1.0f / gui.dx, 1.0f, target_texture, dye_texture, dye_texture_new).wait();
         //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
         clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
 
