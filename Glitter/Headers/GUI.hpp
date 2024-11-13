@@ -79,6 +79,8 @@ public:
     /// <param name="ypos"></param>
     inline void MousePositionUpdate(double xpos, double ypos)
     {
+        mouse_prev_xpos = mouse_xpos;
+        mouse_prev_ypos = mouse_ypos;
         mouse_xpos = xpos;
         mouse_ypos = ypos;
     }
@@ -91,6 +93,8 @@ public:
 
     double mouse_xpos;
     double mouse_ypos;
+    double mouse_prev_xpos;
+    double mouse_prev_ypos;
     bool cursor_enabled;
     bool clicking_enabled;
     bool clicked;
@@ -98,6 +102,8 @@ public:
     bool dye_extreme_mode;
     bool gui_enabled;
     bool apply_gravity;
+    bool normalize_vel_dir;
+    bool std_timestep;
     int selected_index;
     float viscosity;
     float dx;

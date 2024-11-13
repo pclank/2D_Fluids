@@ -17,6 +17,8 @@ GUI::GUI(GLFWwindow* pWindow, Timer& timer)
     reset_pressed = false;
     click_mode = VELOCITY_MODE;
     dye_extreme_mode = false;
+    normalize_vel_dir = true;
+    std_timestep = true;
     gui_enabled = true;
     rendered_texture = DYE;
     selected_index = 2;
@@ -61,7 +63,9 @@ void GUI::Render()
     ImGui::Checkbox("Apply gravity", &apply_gravity);
     ImGui::Checkbox("Add Random Force", &rand_force);
     ImGui::Checkbox("Randomize Force Direction", &rand_force_dir);
-    ImGui::Checkbox("Dye extreme mode", &dye_extreme_mode);
+    ImGui::Checkbox("Dye/Vel extreme mode", &dye_extreme_mode);
+    ImGui::Checkbox("Normalize Velocity Direction", &normalize_vel_dir);
+    ImGui::Checkbox("Standard Timestep", &std_timestep);
     ImGui::SliderFloat("Random Force Scale", &force_scale, 0.1f, 50.0f, "%.1f");
     ImGui::SliderFloat("Fluid Viscosity", &viscosity, 0.0f, 10.0f, "%.1f");
     ImGui::SliderFloat("dx", &dx, 0.1f, 2.0f, "%.1f");
