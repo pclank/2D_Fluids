@@ -50,6 +50,7 @@ cl::Kernel click_effect_test_kernel;
 cl::Kernel image_reset_kernel;
 cl::Kernel click_effect_kernel;
 cl::Kernel add_dye_kernel;
+cl::Kernel add_vel_kernel;
 cl::Kernel gravity_kernel;
 cl::Kernel vel_init_kernel;
 
@@ -82,13 +83,14 @@ unsigned int indices[] = {
 #define TEXTURE_TEST
 #define LOAD_TEXTURE
 //#define RAND_TEX
-#define STD_TIMESTEP
+//#define STD_TIMESTEP
 #define VORTICITY
 #define NEUMANN_BOUND
 //#define DISABLE_SIM
 #define RESET_TEXTURES
-//#define RESET_PRESSURE_EACH_ITER
-#define INITIALIZE_VEL
+#define RESET_PRESSURE_EACH_ITER
+//#define INITIALIZE_VEL
+#define INITIALIZE_DYE_FROM_TEX
 #define JACOBI_REPS 15
 
 #ifdef TEXTURE_TEST
@@ -116,10 +118,12 @@ cl::make_kernel<int, int, cl::Image2D> click_effect_tester(click_effect_test_ker
 cl::make_kernel<cl::Image2D> image_resetter(image_reset_kernel);
 cl::make_kernel<int, int, float, int, cl::Image2D, cl::Image2D> click_effecter(click_effect_kernel);
 cl::make_kernel<int, int, float, int, cl::Image2D> dye_adder(add_dye_kernel);
-cl::make_kernel<cl::Image2D, cl::Image2D> gravitier(gravity_kernel);
+cl::make_kernel<int, int, int, int, float, int, cl::Image2D, cl::Image2D> vel_adder(add_vel_kernel);
+cl::make_kernel<float, cl::Image2D, cl::Image2D> gravitier(gravity_kernel);
 cl::make_kernel<cl::Image2D> velocity_initializer(vel_init_kernel);
 
 // Images
+cl::Image2D init_texture;
 cl::Image2D target_texture;
 cl::Image2D old_vel;
 cl::Image2D new_vel;

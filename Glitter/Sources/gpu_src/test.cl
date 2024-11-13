@@ -60,6 +60,8 @@ float AdvancedRandomFloat(uint seed)
 
 float4 lerp(float4 a, float4 b, float t)
 {
+	t = t < 0 ? 0 : (t > 1 ? 1 : t);
+
 	return (1.0f - t) * a + t * b;
 }
 
@@ -104,21 +106,37 @@ kernel void AvectFluid(float timestep, float rdx,
 	int y = get_global_id(1);
 	int2 coords = (int2)(x, y);
 
+	//if (read_imagef(u, sampler, coords).x == 0.0f && read_imagef(u, sampler, coords).y == 0.0f)
+	//{
+	//	//write_imagef(xNew, coords, (float4)(0.0f, 0.0f, 1.0f, 1.0f));
+	//	return;
+	//}
+
 	// follow the velocity field "back in time"
 	float2 pos = (float2)(coords.x, coords.y) - timestep * rdx * read_imagef(u, sampler, coords).xy;
+
+	pos = (float2)(clamp(pos.x, 0.0f, (float)get_image_width(u) - 1.0f), clamp(pos.y, 0.0f, (float)get_image_width(u) - 1.0f));
 
 	// find 4 closest texel positions
 	float4 st;
 
-	st.xy = floor(pos - 0.5f) + 0.5f;
-	st.zw = st.xy + 1.0f;
+	/*st.xy = floor(pos - 0.5f) + 0.5f;
+	st.zw = st.xy + 1.0f;*/
+	st.x = floor(pos.x);
+	st.y = floor(pos.y);
+	st.z = st.x + 1.0f;
+	st.w = st.y + 1.0f;
 
 	float2 t = pos - st.xy;
 
-	float4 tex11 = read_imagef(xOld, sampler, st.xy);
+	/*float4 tex11 = read_imagef(xOld, sampler, st.xy);
 	float4 tex21 = read_imagef(xOld, sampler, st.zy);
 	float4 tex12 = read_imagef(xOld, sampler, st.xw);
-	float4 tex22 = read_imagef(xOld, sampler, st.zw);
+	float4 tex22 = read_imagef(xOld, sampler, st.zw);*/
+	float4 tex11 = read_imagef(xOld, sampler, (int2)(floor(st.x), floor(st.y)));
+	float4 tex21 = read_imagef(xOld, sampler, (int2)(floor(st.z), floor(st.y)));
+	float4 tex12 = read_imagef(xOld, sampler, (int2)(floor(st.x), floor(st.w)));
+	float4 tex22 = read_imagef(xOld, sampler, (int2)(floor(st.z), floor(st.w)));
 
 	// bilinearly interpolate
 	float4 interpolated = lerp(lerp(tex11, tex21, t.x), lerp(tex12, tex22, t.x), t.y);
@@ -151,8 +169,10 @@ kernel void Divergence(float half_rdx, read_only image2d_t vector_field, write_o
 	// Neighbors stuff
 	float4 left = read_imagef(vector_field, sampler, coords - (int2)(1, 0));
 	float4 right = read_imagef(vector_field, sampler, coords + (int2)(1, 0));
-	float4 bottom = read_imagef(vector_field, sampler, coords - (int2)(0, 1));
-	float4 top = read_imagef(vector_field, sampler, coords + (int2)(0, 1));
+	/*float4 bottom = read_imagef(vector_field, sampler, coords - (int2)(0, 1));
+	float4 top = read_imagef(vector_field, sampler, coords + (int2)(0, 1));*/
+	float4 bottom = read_imagef(vector_field, sampler, coords + (int2)(0, 1));
+	float4 top = read_imagef(vector_field, sampler, coords - (int2)(0, 1));
 
 	float4 div = (float4)(half_rdx * (right.x - left.x + top.y - bottom.y));
 	//float4 div = (float4)((right.x - left.x + top.y - bottom.y));
@@ -169,8 +189,10 @@ kernel void Jacobi(float alpha, float rBeta, read_only image2d_t x_vector, read_
 	// Neighbors stuff
 	float4 left = read_imagef(x_vector, sampler, coords - (int2)(1, 0));
 	float4 right = read_imagef(x_vector, sampler, coords + (int2)(1, 0));
-	float4 bottom = read_imagef(x_vector, sampler, coords - (int2)(0, 1));
-	float4 top = read_imagef(x_vector, sampler, coords + (int2)(0, 1));
+	/*float4 bottom = read_imagef(x_vector, sampler, coords - (int2)(0, 1));
+	float4 top = read_imagef(x_vector, sampler, coords + (int2)(0, 1));*/
+	float4 bottom = read_imagef(x_vector, sampler, coords + (int2)(0, 1));
+	float4 top = read_imagef(x_vector, sampler, coords - (int2)(0, 1));
 
 	float4 bC = read_imagef(b_vector, sampler, coords);
 
@@ -188,8 +210,10 @@ kernel void Gradient(float half_rdx, read_only image2d_t pressure, read_only ima
 	//h1texRECTneighbors(p, coords, pL, pR, pB, pT);
 	float4 pressure_left = read_imagef(pressure, sampler, coords - (int2)(1, 0));
 	float4 pressure_right = read_imagef(pressure, sampler, coords + (int2)(1, 0));
-	float4 pressure_bottom = read_imagef(pressure, sampler, coords - (int2)(0, 1));
-	float4 pressure_top = read_imagef(pressure, sampler, coords + (int2)(0, 1));
+	/*float4 pressure_bottom = read_imagef(pressure, sampler, coords - (int2)(0, 1));
+	float4 pressure_top = read_imagef(pressure, sampler, coords + (int2)(0, 1));*/
+	float4 pressure_bottom = read_imagef(pressure, sampler, coords + (int2)(0, 1));
+	float4 pressure_top = read_imagef(pressure, sampler, coords - (int2)(0, 1));
 
 	// TODO: Give meaning to "x" value
 	float2 grad = (float2)(pressure_right.x - pressure_left.x, pressure_top.x - pressure_bottom.x) * half_rdx;
@@ -483,7 +507,8 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 
 	/*float random_val = AdvancedRandomFloat(seed);
 	float4 tgt_val = scale * (float4)(random_val, random_val, random_val, 1.0f);*/
-	float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+	//float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 1.0f);
+	float4 tgt_val = scale * (float4)(AdvancedRandomFloat(seed), AdvancedRandomFloat(seed), 0.0f, 1.0f);
 
 	// TODO: Add better algorithm for area-of-effect!
 	if (extreme_flag == 1)
@@ -516,7 +541,48 @@ kernel void AddDye(int xpos, int ypos, float scale, int extreme_flag, write_only
 	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
 }
 
-kernel void ApplyGravity(read_only image2d_t src, write_only image2d_t tgt)
+kernel void AddVelocity(int xpos, int ypos, int prev_xpos, int prev_ypos, float scale, int extreme_flag, read_only image2d_t src, write_only image2d_t tgt)
+{
+	int2 coords = (int2)(clamp(xpos, 0, get_image_width(tgt) - 1), clamp(get_image_width(tgt) - 1 - ypos, 0, get_image_width(tgt) - 1));
+
+	float4 src_val = read_imagef(src, sampler, coords);
+
+	//float2 dir = normalize((float2)(xpos - prev_xpos, ypos - prev_ypos));
+	float2 dir = normalize((float2)(xpos - prev_xpos, prev_ypos - ypos));
+	float4 tgt_val = (float4)(scale * dir.x, scale * dir.y, 0.0f, 1.0f) + src_val;
+
+	// TODO: Add better algorithm for area-of-effect!
+	if (extreme_flag == 1)
+	{
+		write_imagef(tgt, coords, tgt_val);
+
+		for (int i = 1; i < 40; i++)
+		{
+			write_imagef(tgt, clamp(coords + i * (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+			write_imagef(tgt, clamp(coords + i * (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+		}
+
+		return;
+	}
+
+	write_imagef(tgt, coords, tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 0), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(0, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(1, -1), 0, get_image_width(tgt) - 1), tgt_val);
+	write_imagef(tgt, clamp(coords + (int2)(-1, 1), 0, get_image_width(tgt) - 1), tgt_val);
+}
+
+kernel void ApplyGravity(float time_step, read_only image2d_t src, write_only image2d_t tgt)
 {
 	int x = get_global_id(0);
 	int y = get_global_id(1);
@@ -524,7 +590,7 @@ kernel void ApplyGravity(read_only image2d_t src, write_only image2d_t tgt)
 
 	float4 src_val = read_imagef(src, sampler, coords);
 
-	write_imagef(tgt, coords, src_val + (float4)(0.0f, 9.764f, 0.0f, 1.0f));
+	write_imagef(tgt, coords, src_val - (float4)(0.0f, 9.764f, 0.0f, 1.0f) * time_step);
 }
 
 kernel void VelocityInitializer(write_only image2d_t tgt)

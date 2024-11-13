@@ -79,6 +79,8 @@ public:
     /// <param name="ypos"></param>
     inline void MousePositionUpdate(double xpos, double ypos)
     {
+        mouse_prev_xpos = mouse_xpos;
+        mouse_prev_ypos = mouse_ypos;
         mouse_xpos = xpos;
         mouse_ypos = ypos;
     }
@@ -91,6 +93,8 @@ public:
 
     double mouse_xpos;
     double mouse_ypos;
+    double mouse_prev_xpos;
+    double mouse_prev_ypos;
     bool cursor_enabled;
     bool clicking_enabled;
     bool clicked;
