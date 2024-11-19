@@ -443,6 +443,7 @@ int main(int argc, char * argv[]) {
     vel_adder = cl::Kernel(program, "AddVelocity");
     gravitier = cl::Kernel(program, "ApplyGravity");
     velocity_initializer = cl::Kernel(program, "VelocityInitializer");
+    alt_visualizer = cl::Kernel(program, "AltVisualizer");
 
 #ifdef RESET_TEXTURES
     image_resetter(cl::EnqueueArgs(queue, global_test), target_texture).wait();
@@ -803,15 +804,15 @@ int main(int argc, char * argv[]) {
         //// ****************************************************************************************
         //// Diffusion for dye
         //// ****************************************************************************************
-        //centerFactor = 1.0f / (gui.viscosity * time_step);
-        //stencilFactor = 1.0f / (4.0f + centerFactor);
-        //for (int i = 0; i < JACOBI_REPS; i++)
-        //{
-        //    //jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
-        //    jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, dye_texture, dye_texture_new).wait();
-        //    //tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
-        //    clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
-        //}
+        /*centerFactor = 1.0f / (gui.viscosity * time_step);
+        stencilFactor = 1.0f / (4.0f + centerFactor);
+        for (int i = 0; i < JACOBI_REPS; i++)
+        {
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, target_texture, dye_texture_new).wait();
+            jacobier(cl::EnqueueArgs(queue, global_test), centerFactor, stencilFactor, dye_texture, dye_texture, dye_texture_new).wait();
+            tex_copier(cl::EnqueueArgs(queue, global_test), dye_texture_new, dye_texture).wait();
+            clEnqueueCopyImage(queue(), dye_texture_new(), dye_texture(), imageOrigin, imageOrigin, imageSize, 0, NULL, NULL);
+        }*/
 
 //        // ****************************************************************************************
 //        // Bound Dye
@@ -827,8 +828,9 @@ int main(int argc, char * argv[]) {
 //#endif // NEUMANN_BOUND
 
         // Display stuff
-        mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
+        //mixer(cl::EnqueueArgs(queue, global_test), gui.GetMixBias(), new_vel, new_pressure, display_texture).wait();
         //display_converter(cl::EnqueueArgs(queue, global_test), new_vel, display_texture).wait();
+        //alt_visualizer(cl::EnqueueArgs(queue, global_test), old_pressure, target_texture, dye_texture).wait();
 #endif // DISABLE_SIM
 
         // Release shared objects

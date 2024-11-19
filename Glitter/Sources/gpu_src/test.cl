@@ -683,3 +683,21 @@ kernel void VelocityInitializer(write_only image2d_t tgt)
 	// float4 val = (float4)(1.0f, 1.0f, 0.0f, 1.0f);
 	write_imagef(tgt, coords, val);
 }
+
+kernel void AltVisualizer(read_only image2d_t pressure, read_only image2d_t vel, write_only image2d_t tgt)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	int2 coords = (int2)(x, y);
+
+	/*float4 val = (float4)(read_imagef(pressure, sampler, coords).x * 555,
+		read_imagef(vel, sampler, coords).x * 128 + 128,
+		read_imagef(vel, sampler, coords).y * 128 + 128, 1.0f);*/
+
+	float4 val = (float4)(read_imagef(pressure, sampler, coords).x,
+		read_imagef(vel, sampler, coords).x,
+		read_imagef(vel, sampler, coords).y, 1.0f);
+
+	write_imagef(tgt, coords, val);
+	
+}
