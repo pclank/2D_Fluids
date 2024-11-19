@@ -53,6 +53,7 @@ cl::Kernel add_dye_kernel;
 cl::Kernel add_vel_kernel;
 cl::Kernel gravity_kernel;
 cl::Kernel vel_init_kernel;
+cl::Kernel alt_vis_kernel;
 
 cl::NDRange global_tex(mWidth, mHeight);
 cl::NDRange global(10);
@@ -121,6 +122,7 @@ cl::make_kernel<int, int, float, int, cl::Image2D> dye_adder(add_dye_kernel);
 cl::make_kernel<int, int, int, int, float, int, int, cl::Image2D, cl::Image2D> vel_adder(add_vel_kernel);
 cl::make_kernel<float, cl::Image2D, cl::Image2D> gravitier(gravity_kernel);
 cl::make_kernel<cl::Image2D> velocity_initializer(vel_init_kernel);
+cl::make_kernel<cl::Image2D, cl::Image2D, cl::Image2D> alt_visualizer(alt_vis_kernel);
 
 // Images
 cl::Image2D init_texture;
